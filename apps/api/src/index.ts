@@ -102,7 +102,7 @@ type AppContext = Context<{ Bindings: Bindings; Variables: { auth: AuthContext }
 
 const SESSION_COOKIE = "edgeever_session";
 const PASSWORD_HASH_ALGORITHM = "pbkdf2-sha256";
-const PASSWORD_HASH_ITERATIONS = 210_000;
+const PASSWORD_HASH_ITERATIONS = 100_000;
 const PASSWORD_HASH_BYTES = 32;
 const PASSWORD_SALT_BYTES = 16;
 const SESSION_TOKEN_BYTES = 32;
