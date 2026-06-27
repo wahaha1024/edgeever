@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import type { ButtonHTMLAttributes } from "react";
+import { forwardRef, type ButtonHTMLAttributes } from "react";
 
 type ButtonVariant = "solid" | "soft" | "ghost" | "outline" | "danger";
 type ButtonSize = "sm" | "md" | "icon";
@@ -10,10 +10,10 @@ type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClassName: Record<ButtonVariant, string> = {
-  solid: "bg-emerald-700 text-white hover:bg-emerald-800 border-emerald-700",
-  soft: "bg-emerald-50 text-emerald-950 hover:bg-emerald-100 border-emerald-200",
-  ghost: "bg-transparent text-emerald-800 hover:bg-emerald-50 hover:text-emerald-950 border-transparent",
-  outline: "bg-white text-emerald-900 hover:bg-emerald-50 border-emerald-200",
+  solid: "bg-[#627f58] text-white hover:bg-[#526d49] border-[#627f58]",
+  soft: "bg-slate-50 text-slate-700 hover:bg-slate-100 border-slate-200",
+  ghost: "bg-transparent text-slate-600 hover:bg-slate-50 hover:text-slate-900 border-transparent",
+  outline: "bg-white text-slate-700 hover:bg-slate-50 border-slate-200",
   danger: "bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-100",
 };
 
@@ -23,14 +23,17 @@ const sizeClassName: Record<ButtonSize, string> = {
   icon: "h-8 w-8 justify-center p-0",
 };
 
-export const Button = ({ className, variant = "soft", size = "md", ...props }: ButtonProps) => (
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(({ className, variant = "soft", size = "md", ...props }, ref) => (
   <button
+    ref={ref}
     className={cn(
-      "inline-flex shrink-0 items-center rounded-md border font-medium transition disabled:pointer-events-none disabled:opacity-50",
+      "inline-flex shrink-0 items-center rounded-md border font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#627f58]/70 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
       variantClassName[variant],
       sizeClassName[size],
       className
     )}
     {...props}
   />
-);
+));
+
+Button.displayName = "Button";
