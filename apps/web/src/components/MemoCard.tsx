@@ -309,14 +309,14 @@ export const MemoCard = ({
         !selectionMode && selected
           ? "lg:bg-slate-100"
           : checked
-            ? "bg-emerald-50 ring-1 ring-emerald-200 lg:bg-slate-100 lg:ring-0"
+            ? "bg-slate-50 ring-1 ring-slate-200 lg:bg-slate-100 lg:ring-0"
             : "active:bg-slate-50 lg:hover:bg-slate-50"
       )}
     >
       <div className={cn("flex min-h-[132px] items-center", listDensity === "compact" && "min-h-[84px] lg:min-h-[76px]")}>
         {showSelectionControl && (
           <button
-            className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 lg:ml-4 lg:h-8 lg:w-8"
+            className="ml-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-2 lg:ml-4 lg:h-8 lg:w-8"
             type="button"
             title={selectionControlLabel}
             aria-label={selectionControlLabel}
@@ -330,7 +330,7 @@ export const MemoCard = ({
               className={cn(
                 "flex h-8 w-8 items-center justify-center rounded-full border transition-all duration-150",
                 checked
-                  ? "border-emerald-500 bg-emerald-500 text-white shadow-[0_4px_10px_rgb(var(--brand-green-rgb)/0.22)]"
+                  ? "border-slate-700 bg-slate-700 text-white shadow-[0_4px_10px_rgba(15,23,42,0.16)]"
                   : "border-slate-300 bg-white text-transparent"
               )}
               aria-hidden="true"
@@ -341,7 +341,7 @@ export const MemoCard = ({
         )}
         <button
           className={cn(
-            "min-w-0 flex-1 px-4 py-4 text-left touch-pan-y focus-visible:bg-slate-50 focus-visible:shadow-[inset_3px_0_0_var(--brand-green)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-500/60 [-webkit-touch-callout:none] lg:py-4 transition-all duration-200",
+            "min-w-0 flex-1 px-4 py-4 text-left touch-pan-y focus-visible:bg-slate-50 focus-visible:shadow-[inset_3px_0_0_rgb(148,163,184)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-400/60 [-webkit-touch-callout:none] lg:py-4 transition-all duration-200",
             listDensity === "compact" && "py-3",
             showSelectionControl && "pl-3 lg:pl-3",
             !isTrashView && !multiSelectKeyDown && "lg:cursor-grab lg:active:cursor-grabbing",
@@ -362,7 +362,7 @@ export const MemoCard = ({
           title="Ctrl/Cmd 点击切换选择，Shift 点击连续选择，可拖到左侧笔记本移动，移动端长按进入选择"
         >
           <div className={cn("mb-2 flex min-w-0 items-center gap-1.5 text-base font-semibold leading-6 text-slate-900 lg:text-base", listDensity === "compact" && "mb-1")}>
-            {memo.isPinned && <Star className="h-4 w-4 shrink-0 fill-current text-emerald-500" />}
+            {memo.isPinned && <Star className="h-4 w-4 shrink-0 fill-current text-slate-500" />}
             <span className="min-w-0 truncate">{memoTitle}</span>
           </div>
           <div
@@ -376,7 +376,7 @@ export const MemoCard = ({
           <div className={cn("mt-5 flex flex-wrap items-center gap-2", listDensity === "compact" && "mt-2")}>
             <time className="text-xs font-medium text-slate-400 lg:text-sm lg:font-normal lg:text-slate-500">{formatMemoPreviewDate(memo.updatedAt)}</time>
             {memo.tags.slice(0, 3).map((tag) => (
-              <span key={tag} className="rounded-sm bg-emerald-50 px-1.5 py-0.5 text-xs font-medium text-emerald-700">
+              <span key={tag} className="rounded-sm bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-600">
                 #{tag}
               </span>
             ))}
@@ -391,7 +391,7 @@ export const MemoCard = ({
             )}
           >
             <button
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition hover:bg-slate-100 hover:text-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-2"
               type="button"
               title="更多操作"
               aria-label="更多操作"
@@ -405,8 +405,8 @@ export const MemoCard = ({
             </button>
             <button
               className={cn(
-                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2",
-                isTrashView ? "hover:bg-emerald-50 hover:text-emerald-700" : "hover:bg-rose-50 hover:text-rose-700"
+                "flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-400 transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-2",
+                isTrashView ? "hover:bg-slate-100 hover:text-slate-800" : "hover:bg-rose-50 hover:text-rose-700"
               )}
               type="button"
               title={isTrashView ? "恢复笔记" : "删除笔记"}

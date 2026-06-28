@@ -73,8 +73,8 @@ body,
 body {
   margin: 0;
   background:
-    linear-gradient(180deg, rgba(247, 248, 244, 0.98), rgba(239, 243, 235, 0.98)),
-    #f6f7f3;
+    linear-gradient(180deg, rgba(248, 250, 252, 0.98), rgba(241, 245, 249, 0.98)),
+    #f8fafc;
   color: #0f172a;
   overscroll-behavior-x: none;
   overscroll-behavior-y: auto;
@@ -204,14 +204,14 @@ textarea {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(98, 127, 88, 0.16);
+  background: rgba(100, 116, 139, 0.18);
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(98, 127, 88, 0.35);
+  background: rgba(100, 116, 139, 0.34);
 }
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(98, 127, 88, 0.16) transparent;
+  scrollbar-color: rgba(100, 116, 139, 0.18) transparent;
 }

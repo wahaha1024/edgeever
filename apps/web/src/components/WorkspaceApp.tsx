@@ -123,7 +123,7 @@ const MobileBottomNavButton = ({
   <button
     className={cn(
       "flex h-14 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium transition-all duration-200",
-      active ? "text-emerald-500" : "text-slate-500 hover:bg-emerald-50 hover:text-emerald-500"
+      active ? "text-slate-950" : "text-slate-500 hover:bg-slate-100 hover:text-slate-950"
     )}
     type="button"
     aria-current={active ? "page" : undefined}
@@ -292,7 +292,7 @@ const MobileNotebookPicker = ({
           <button
             className={cn(
               "mb-1 flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm transition",
-              allSelected ? "bg-emerald-50 font-semibold text-emerald-700" : "text-slate-800 hover:bg-slate-50"
+              allSelected ? "bg-slate-100 font-semibold text-slate-950" : "text-slate-800 hover:bg-slate-50"
             )}
             type="button"
             data-mobile-notebook-id="__all__"
@@ -308,7 +308,7 @@ const MobileNotebookPicker = ({
                 <span>{searchActive ? "匹配的笔记本" : "笔记本"}</span>
                 {!searchActive && expandableNotebookIds.length > 0 && (
                   <button
-                    className="rounded-md px-2 py-1 text-emerald-500 transition hover:bg-emerald-50 hover:text-emerald-700"
+                    className="rounded-md px-2 py-1 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
                     type="button"
                     aria-label={allNotebookBranchesExpanded ? "收起全部笔记本" : "展开全部笔记本"}
                     aria-pressed={allNotebookBranchesExpanded}
@@ -338,7 +338,7 @@ const MobileNotebookPicker = ({
               </div>
               {searchQuery && (
                 <button
-                  className="mt-3 text-sm font-semibold text-emerald-500"
+                  className="mt-3 text-sm font-semibold text-slate-600"
                   type="button"
                   onClick={() => setNotebookSearch("")}
                 >
@@ -382,9 +382,9 @@ const MobileNotebookPickerItem = ({
         className={cn(
           "flex h-12 w-full items-center gap-3 rounded-md px-3 text-left text-sm transition",
           selected
-            ? "bg-emerald-50 font-semibold text-emerald-700"
+            ? "bg-slate-100 font-semibold text-slate-950"
             : hasSelectedDescendant
-              ? "bg-emerald-50/70 text-emerald-700 hover:bg-emerald-50"
+              ? "bg-slate-50 text-slate-900 hover:bg-slate-100"
               : "text-slate-800 hover:bg-slate-50"
         )}
         style={{ paddingLeft: `${12 + depth * 18}px` }}
@@ -1678,15 +1678,15 @@ export const WorkspaceApp = ({
         : "下拉刷新网页";
 
   return (
-    <div className="flex h-[100dvh] overflow-hidden bg-emerald-50 text-slate-950">
+    <div className="flex h-[100dvh] overflow-hidden bg-slate-50 text-slate-950">
       {pullToRefreshVisible && (
         <div
           className="pointer-events-none fixed inset-x-0 top-[max(0.75rem,env(safe-area-inset-top))] z-50 flex justify-center lg:hidden"
           style={{ transform: `translateY(${Math.max(0, pullToRefreshDistance - 24)}px)` }}
           aria-hidden="true"
         >
-          <div className="inline-flex h-9 items-center gap-2 rounded-full border border-emerald-100 bg-white/95 px-3 text-xs font-semibold text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.12)] backdrop-blur">
-            <RefreshCw className={cn("h-4 w-4 text-emerald-600", (isPullRefreshing || pullToRefreshReady) && "animate-spin")} />
+          <div className="inline-flex h-9 items-center gap-2 rounded-full border border-slate-200 bg-white/95 px-3 text-xs font-semibold text-slate-600 shadow-[0_10px_28px_rgba(15,23,42,0.12)] backdrop-blur">
+            <RefreshCw className={cn("h-4 w-4 text-slate-500", (isPullRefreshing || pullToRefreshReady) && "animate-spin")} />
             <span>{pullToRefreshLabel}</span>
           </div>
         </div>
@@ -1764,7 +1764,7 @@ export const WorkspaceApp = ({
 
           <section
             className={cn(
-              "relative min-w-0 overflow-hidden border-r border-slate-200 bg-[#f8faf8]",
+              "relative min-w-0 overflow-hidden border-r border-slate-200 bg-slate-50",
               rightView === "editor"
                 ? (activePane === "memos" ? "block lg:block lg:bg-white/75 lg:backdrop-blur-lg" : "hidden lg:block lg:bg-white/75 lg:backdrop-blur-lg")
                 : (activePane === "memos" ? "block lg:hidden" : "hidden lg:hidden")
@@ -1848,7 +1848,7 @@ export const WorkspaceApp = ({
               setDesktopActionsOpen={setDesktopActionsOpen}
             />
             <div
-              className="absolute inset-y-0 right-[-3px] z-20 hidden w-1.5 cursor-col-resize transition hover:bg-emerald-300/70 focus-visible:bg-emerald-400/80 focus-visible:outline-none lg:block"
+              className="absolute inset-y-0 right-[-3px] z-20 hidden w-1.5 cursor-col-resize transition hover:bg-slate-300/70 focus-visible:bg-slate-400/80 focus-visible:outline-none lg:block"
               role="separator"
               aria-orientation="vertical"
               aria-valuemin={MIN_MEMO_LIST_WIDTH_PX}

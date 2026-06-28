@@ -155,12 +155,12 @@ export const NotebookTreeItem = ({
             className={cn(
               "group relative flex h-9 items-center gap-1 rounded-md px-2 text-sm transition-all duration-200 select-none",
               selected
-                ? "bg-emerald-50 font-medium text-emerald-700"
+                ? "bg-slate-100 font-medium text-slate-950"
                 : hasSelectedDescendant
-                  ? "bg-emerald-50/70 text-emerald-700 hover:bg-emerald-50"
+                  ? "bg-slate-50 text-slate-900 hover:bg-slate-100"
                   : "text-slate-700 hover:bg-slate-50",
-              dropPosition === "inside" && "ring-2 ring-[#9eb093]",
-              dropPosition === "inside" && hasChildren && !open && "bg-emerald-50"
+              dropPosition === "inside" && "ring-2 ring-slate-300",
+              dropPosition === "inside" && hasChildren && !open && "bg-slate-100"
             )}
             draggable
             onDragStart={(event) => {
@@ -233,13 +233,13 @@ export const NotebookTreeItem = ({
                 }
               }}
             >
-              <NotebookIcon className={cn("h-4 w-4 shrink-0 transition-colors duration-200", selected || hasSelectedDescendant ? "text-emerald-500" : "text-slate-500")} />
+              <NotebookIcon className={cn("h-4 w-4 shrink-0 transition-colors duration-200", selected || hasSelectedDescendant ? "text-slate-700" : "text-slate-500")} />
               <span className="truncate">{node.name}</span>
             </button>
             <button
               className={cn(
                 "hidden h-6 w-6 items-center justify-center rounded-md group-focus-within:flex group-hover:flex transition-colors duration-150",
-                selected ? "hover:bg-[#e6efe1]" : "hover:bg-slate-100"
+                selected ? "hover:bg-slate-200" : "hover:bg-slate-100"
               )}
               type="button"
               title="新建子笔记本"
@@ -254,7 +254,7 @@ export const NotebookTreeItem = ({
             <button
               className={cn(
                 "hidden h-6 w-6 items-center justify-center rounded-md group-focus-within:flex group-hover:flex transition-colors duration-150",
-                selected ? "hover:bg-[#e6efe1]" : "hover:bg-slate-100"
+                selected ? "hover:bg-slate-200" : "hover:bg-slate-100"
               )}
               type="button"
               title="重命名笔记本"
@@ -281,10 +281,10 @@ export const NotebookTreeItem = ({
               </button>
             ) : null}
             {dropPosition === "before" && (
-              <div className="absolute top-0 right-2 h-[3px] bg-emerald-500 rounded-full z-30 animate-pulse" style={{ left: `${20 + depth * 14}px` }} />
+              <div className="absolute top-0 right-2 h-[3px] bg-slate-400 rounded-full z-30 animate-pulse" style={{ left: `${20 + depth * 14}px` }} />
             )}
             {dropPosition === "after" && (
-              <div className="absolute bottom-0 right-2 h-[3px] bg-emerald-500 rounded-full z-30 animate-pulse" style={{ left: `${20 + depth * 14}px` }} />
+              <div className="absolute bottom-0 right-2 h-[3px] bg-slate-400 rounded-full z-30 animate-pulse" style={{ left: `${20 + depth * 14}px` }} />
             )}
           </div>
         </ContextMenuTrigger>

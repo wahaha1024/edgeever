@@ -58,7 +58,7 @@ const SidebarNavButton = ({
   <button
     className={cn(
       "flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium leading-none transition-all duration-200",
-      active ? "bg-emerald-50 text-emerald-800" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
+      active ? "bg-slate-100 text-slate-950" : "text-slate-700 hover:bg-slate-50 hover:text-slate-950"
     )}
     type="button"
     aria-current={active ? "page" : undefined}
@@ -118,7 +118,7 @@ const SyncStatusBar = ({
     : summary.conflict > 0
       ? "border-amber-200 bg-amber-50 text-amber-800"
       : hasQueuedWork
-        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        ? "border-slate-200 bg-slate-50 text-slate-700"
         : "border-slate-200 bg-white text-slate-500";
 
   return (
@@ -322,9 +322,9 @@ export const NotebookPane = ({
         onDragOver={handleNotebookScrollDragOver}
         onDrop={stopNotebookDragAutoScroll}
       >
-        <div className="mb-4 hidden overflow-hidden rounded-full border border-emerald-100 bg-white shadow-[0_10px_28px_rgba(15,23,42,0.08)] lg:flex">
+        <div className="mb-4 hidden overflow-hidden rounded-full border border-slate-200 bg-white shadow-[0_8px_22px_rgba(15,23,42,0.06)] lg:flex">
           <button
-            className="flex h-14 min-w-0 flex-1 items-center gap-3 px-3 text-left transition-all duration-200 hover:bg-emerald-50/70 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-14 min-w-0 flex-1 items-center gap-3 px-3 text-left transition-all duration-200 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
             type="button"
             title="新建笔记"
             onClick={onCreateMemo}
@@ -350,7 +350,7 @@ export const NotebookPane = ({
           <SidebarSectionLabel icon={<NotebookIcon className="h-4 w-4" />} label="笔记本" />
           <div className="flex items-center gap-1 opacity-100 transition-opacity duration-200 lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
             <button
-              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
               type="button"
               title="新建笔记本"
               aria-label="新建笔记本"
@@ -361,7 +361,7 @@ export const NotebookPane = ({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-emerald-50 hover:text-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+                  className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors duration-200 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
                   type="button"
                   title={`笔记本排序：${activeNotebookSortLabel}`}
                   aria-label={`笔记本排序：${activeNotebookSortLabel}`}
@@ -424,7 +424,7 @@ export const NotebookPane = ({
         <div>
           <button
             onClick={onOpenSettings}
-            className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium leading-none text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+            className="flex h-9 w-full items-center gap-3 rounded-md px-3 text-left text-sm font-medium leading-none text-slate-700 transition-colors duration-200 hover:bg-slate-50 hover:text-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70"
             type="button"
             title="个人中心"
             aria-label="个人中心"

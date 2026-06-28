@@ -109,7 +109,7 @@ const MobileSelectionActionButton = ({
   onClick: () => void;
 }) => (
   <button
-    className="flex h-12 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-100 disabled:hover:bg-transparent"
+    className="flex h-12 flex-col items-center justify-center gap-1 rounded-md text-xs font-medium text-slate-700 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400/70 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:text-slate-300 disabled:opacity-100 disabled:hover:bg-transparent"
     type="button"
     disabled={disabled}
     title={title}
@@ -723,7 +723,7 @@ export const MemoListPane = ({
       tabIndex={0}
       onKeyDown={handleListKeyDown}
     >
-      <header className="border-b border-slate-200 bg-emerald-50 px-4 pb-2 pt-[max(0.375rem,env(safe-area-inset-bottom))] lg:bg-white lg:py-3 lg:pt-3">
+      <header className="border-b border-slate-200 bg-slate-50 px-4 pb-2 pt-[max(0.375rem,env(safe-area-inset-bottom))] lg:bg-white lg:py-3 lg:pt-3">
         {selectionMode ? (
           <div className="mb-3 flex h-10 min-w-0 items-center gap-3 lg:hidden">
             <button
@@ -748,7 +748,7 @@ export const MemoListPane = ({
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-emerald-200 bg-white px-3 text-sm text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.06)]">
+            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-sm text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
               <Search className="h-4 w-4 shrink-0" />
               <input
                 ref={mobileSearchInputRef}
@@ -783,7 +783,7 @@ export const MemoListPane = ({
               )}
             </div>
             <button
-              className="h-9 shrink-0 rounded-md px-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-900"
+              className="h-9 shrink-0 rounded-md px-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900"
               type="button"
               onClick={onCancelMobileSearch}
             >
@@ -851,7 +851,7 @@ export const MemoListPane = ({
                     "flex h-8 w-8 shrink-0 items-center justify-center rounded-md border text-xs font-medium transition-all duration-200 outline-none",
                     filterMode === "all"
                       ? "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-                      : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                      : "border-slate-300 bg-slate-100 text-slate-900 hover:bg-slate-200"
                   )}
                   title={`筛选：${activeFilterLabel}`}
                 >
@@ -864,7 +864,7 @@ export const MemoListPane = ({
                     key={option.value}
                     className={cn(
                       "flex h-9 w-full items-center gap-2 px-3 text-left text-sm cursor-pointer outline-none",
-                      filterMode === option.value ? "text-emerald-700 bg-emerald-50/50" : "text-slate-700 hover:bg-slate-50"
+                      filterMode === option.value ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
                     )}
                     onClick={() => handleFilterModeChange(option.value)}
                   >
@@ -890,7 +890,7 @@ export const MemoListPane = ({
                     key={option.value}
                     className={cn(
                       "flex h-9 w-full items-center gap-2 px-3 text-left text-sm cursor-pointer outline-none",
-                      sortMode === option.value ? "text-emerald-700 bg-emerald-50/50" : "text-slate-700 hover:bg-slate-50"
+                      sortMode === option.value ? "bg-slate-100 text-slate-900" : "text-slate-700 hover:bg-slate-50"
                     )}
                     onClick={() => setSortMode(option.value)}
                   >
@@ -958,14 +958,14 @@ export const MemoListPane = ({
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                   onClick={onOpenTags}
                 >
-                  <Tags className="h-4 w-4 text-emerald-700" />
+                  <Tags className="h-4 w-4 text-slate-500" />
                   标签
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                   onClick={onOpenAssets}
                 >
-                  <Archive className="h-4 w-4 text-emerald-700" />
+                  <Archive className="h-4 w-4 text-slate-500" />
                   附件
                 </DropdownMenuItem>
                 <DropdownMenuItem
@@ -979,7 +979,7 @@ export const MemoListPane = ({
                   className="flex h-9 w-full items-center gap-2 px-3 text-left text-sm text-slate-700 hover:bg-slate-50 cursor-pointer outline-none"
                   onClick={onOpenSettings}
                 >
-                  <KeyRound className="h-4 w-4 text-emerald-700" />
+                  <KeyRound className="h-4 w-4 text-slate-500" />
                   MCP Token
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -988,7 +988,7 @@ export const MemoListPane = ({
         </div>
 
         <div className={cn("items-center gap-2", mobileSearchActive ? "hidden lg:flex" : "flex")}>
-          <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-transparent bg-slate-100 px-3 text-sm text-slate-500 transition focus-within:border-emerald-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-emerald-500/15 lg:rounded-md lg:border-slate-200 lg:bg-slate-50">
+          <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-transparent bg-slate-100 px-3 text-sm text-slate-500 transition focus-within:border-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-slate-400/20 lg:rounded-md lg:border-slate-200 lg:bg-slate-50">
             <Search className="h-4 w-4" />
             <input
               ref={searchInputRef}
@@ -1023,7 +1023,7 @@ export const MemoListPane = ({
                 className={cn(
                   "flex h-9 w-9 items-center justify-center rounded-full border transition",
                   filterMode === option.value
-                    ? "border-emerald-600 bg-emerald-600 text-white shadow-[0_8px_18px_rgb(var(--brand-green-rgb)/0.22)]"
+                    ? "border-slate-700 bg-slate-700 text-white shadow-[0_8px_18px_rgba(15,23,42,0.16)]"
                     : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800"
                 )}
                 type="button"
@@ -1044,7 +1044,7 @@ export const MemoListPane = ({
               {search.trim() ? `搜索「${search.trim()}」` : `筛选：${activeFilterLabel}`} · {filteredMemos.length} 条
             </span>
             <button
-              className="shrink-0 font-semibold text-emerald-700 transition hover:text-emerald-900"
+              className="shrink-0 font-semibold text-slate-600 transition hover:text-slate-950"
               type="button"
               onClick={handleResetListConstraints}
             >
@@ -1061,7 +1061,7 @@ export const MemoListPane = ({
         {selectionMode && (
           <div className="sticky top-0 z-10 mb-3 hidden flex-wrap items-center justify-between gap-2 rounded-md border border-slate-200 bg-white px-3 py-2 shadow-panel lg:flex">
             <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <CheckSquare className="h-4 w-4 text-emerald-500" />
+              <CheckSquare className="h-4 w-4 text-slate-500" />
               {selectionCountLabel}
             </div>
             <div className="flex min-w-0 flex-wrap items-center gap-2">
@@ -1231,7 +1231,7 @@ export const MemoListPane = ({
                     onTogglePinMemo(memo);
                   }}
                 >
-                  <Star className={cn("h-4 w-4", memoContextMenu.memo.isPinned && "fill-current text-emerald-600")} />
+                  <Star className={cn("h-4 w-4", memoContextMenu.memo.isPinned && "fill-current text-slate-700")} />
                   {memoContextMenu.memo.isPinned ? "取消置顶" : "置顶笔记"}
                 </DropdownMenuItem>
               )}
@@ -1279,7 +1279,7 @@ export const MemoListPane = ({
                           key={option.id}
                           className={cn(
                             "flex h-9 w-full items-center gap-2 px-3 text-left text-sm transition hover:bg-white",
-                            option.id === memoContextMenu.memo.notebookId ? "font-semibold text-emerald-700" : "text-slate-700"
+                            option.id === memoContextMenu.memo.notebookId ? "font-semibold text-slate-950" : "text-slate-700"
                           )}
                           style={{ paddingLeft: `${12 + option.depth * 14}px` }}
                           type="button"
@@ -1364,7 +1364,7 @@ export const MemoListPane = ({
                       onPinSelectedMemos(selectedPinTarget);
                     }}
                   >
-                    <Star className={cn("h-4 w-4", !selectedPinTarget && "fill-current text-emerald-500")} />
+                    <Star className={cn("h-4 w-4", !selectedPinTarget && "fill-current text-slate-700")} />
                     {selectionPinLabel}
                   </DropdownMenuItem>
                   <DropdownMenuItem
