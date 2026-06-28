@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Copy, Image, KeyRound, LogOut, Plus, ShieldCheck, Trash2, User } from "lucide-react";
+import { ChevronLeft, CircleQuestionMark, Copy, Image, KeyRound, LogOut, Plus, ShieldCheck, Trash2, User } from "lucide-react";
 import type { ApiToken, AuthUser } from "@edgeever/shared";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -176,6 +176,53 @@ const getMcpRemoteServerUrl = () => {
   return `${window.location.origin}/mcp`;
 };
 
+const getEdgeEverBaseUrl = () => {
+  if (typeof window === "undefined") {
+    return "https://your-domain.example";
+  }
+
+  return window.location.origin;
+};
+
+const McpTitleWithHelp = () => {
+  const baseUrl = getEdgeEverBaseUrl();
+  const remoteExample = JSON.stringify(
+    {
+      mcpServers: {
+        edgeever: {
+          url: `${baseUrl}/mcp`,
+          headers: {
+            Authorization: "Bearer 我创建的token",
+          },
+        },
+      },
+    },
+    null,
+    2
+  );
+  return (
+    <div className="group/help relative w-fit max-w-full">
+      <CardTitle className="flex items-center gap-2 text-sm">
+        <KeyRound className="h-4 w-4 text-emerald-700" />
+        API & MCP 授权
+        <button
+          className="flex h-6 w-6 items-center justify-center rounded-md border border-emerald-100 bg-emerald-50/70 text-emerald-700 shadow-sm transition-colors hover:border-emerald-200 hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70"
+          type="button"
+          aria-label="查看 MCP 使用示例"
+        >
+          <CircleQuestionMark className="h-3.5 w-3.5" />
+        </button>
+      </CardTitle>
+      <div className="absolute left-0 top-full z-30 mt-2 hidden w-[min(42rem,calc(100vw-2rem))] rounded-lg border border-slate-200 bg-white p-3 text-left shadow-lg group-hover/help:block group-focus-within/help:block">
+        <span className="mb-2 block text-xs font-semibold text-slate-500">Remote MCP 示例</span>
+        <pre className="max-h-44 overflow-auto rounded-md border border-slate-100 bg-slate-950 p-3 text-[11px] leading-5 text-slate-100">
+          <code>{remoteExample}</code>
+        </pre>
+      </div>
+    </div>
+  );
+};
+
 const McpRemoteServerField = () => {
   const mcpRemoteServerUrl = getMcpRemoteServerUrl();
   const [copied, setCopied] = useState(false);
@@ -349,10 +396,7 @@ const TokenCard = ({
 }: TokenCardProps) => (
   <Card className="w-full min-w-0 overflow-hidden shadow-none">
     <CardHeader className="p-4">
-      <CardTitle className="flex items-center gap-2 text-sm">
-        <KeyRound className="h-4 w-4 text-emerald-700" />
-        API & MCP 授权
-      </CardTitle>
+      <McpTitleWithHelp />
       <CardDescription className="text-xs leading-4">为 MCP 客户端或第三方工具生成访问凭证。</CardDescription>
     </CardHeader>
     <CardContent className="space-y-4 p-4 pt-0">
