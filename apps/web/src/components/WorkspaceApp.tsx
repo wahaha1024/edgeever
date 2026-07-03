@@ -967,6 +967,10 @@ export const WorkspaceApp = ({
     selectedMemoIndex >= 0 && selectedMemoIndex < memos.length - 1 ? memos[selectedMemoIndex + 1]?.id : null;
 
   useEffect(() => {
+    if (selectedMemoId && selectedMemoId === createdMemoEditId) {
+      return;
+    }
+
     if (memos.length === 0) {
       setSelectedMemoId(null);
       return;
@@ -975,7 +979,7 @@ export const WorkspaceApp = ({
     if (!selectedMemoId || !memos.some((memo) => memo.id === selectedMemoId)) {
       setSelectedMemoId(memos[0].id);
     }
-  }, [memos, selectedMemoId]);
+  }, [createdMemoEditId, memos, selectedMemoId]);
 
   const memoQuery = useQuery({
     queryKey: selectedMemoId ? memoDetailQueryKey(selectedMemoId, memoView) : ["memo", selectedMemoId, memoView],

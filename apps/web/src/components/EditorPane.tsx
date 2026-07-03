@@ -451,15 +451,37 @@ export const EditorPane = ({
   useEffect(() => {
     if (memo?.id && memo.id === mobileDefaultEditMemoId) {
       setIsMobileEditing(true);
-      window.requestAnimationFrame(() => {
-        window.requestAnimationFrame(() => {
+      let frame = 0;
+      let cancelled = false;
+
+      const focusWhenReady = (attempt = 0) => {
+        frame = window.requestAnimationFrame(() => {
+          if (cancelled) {
+            return;
+          }
+
           const currentEditor = editorRef.current;
           if (isEditorReady(currentEditor)) {
             currentEditor.commands.focus("end");
+            onMobileDefaultEditConsumed();
+            return;
           }
+
+          if (attempt < 10) {
+            focusWhenReady(attempt + 1);
+            return;
+          }
+
+          onMobileDefaultEditConsumed();
         });
-      });
-      onMobileDefaultEditConsumed();
+      };
+
+      focusWhenReady();
+
+      return () => {
+        cancelled = true;
+        window.cancelAnimationFrame(frame);
+      };
     }
   }, [memo?.id, mobileDefaultEditMemoId, onMobileDefaultEditConsumed]);
 
