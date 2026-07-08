@@ -3245,7 +3245,10 @@ const EditMemoModal = ({
   const [contentSelection, setContentSelection] = useState<TextSelection>({ start: 0, end: 0 });
   const [notebookId, setNotebookId] = useState("");
   const [tagsText, setTagsText] = useState("");
+  const [replaceQuery, setReplaceQuery] = useState("");
+  const [replaceValue, setReplaceValue] = useState("");
   const [draftLoaded, setDraftLoaded] = useState(false);
+  const replaceMatches = useMemo(() => getTextSearchMatches(contentMarkdown, replaceQuery), [contentMarkdown, replaceQuery]);
 
   useEffect(() => {
     let mounted = true;
@@ -3257,6 +3260,8 @@ const EditMemoModal = ({
       setContentSelection({ start: 0, end: 0 });
       setNotebookId(memo.notebookId);
       setTagsText(memo.tags.join(", "));
+      setReplaceQuery("");
+      setReplaceValue("");
       readMobileMemoDraft(memo.id).then((draft) => {
         if (!mounted) {
           return;
@@ -3400,6 +3405,16 @@ const EditMemoModal = ({
     );
   };
 
+  const replaceAllMatches = () => {
+    if (replaceMatches.length === 0) {
+      return;
+    }
+
+    const nextMarkdown = replaceTextMatches(contentMarkdown, replaceMatches, replaceValue);
+    setContentMarkdown(nextMarkdown);
+    setContentSelection({ start: 0, end: 0 });
+  };
+
   return (
     <Modal animationType="slide" onRequestClose={onClose} presentationStyle="pageSheet" visible={Boolean(memo)}>
       <SafeAreaView style={styles.modalSafeArea}>
@@ -3443,6 +3458,36 @@ const EditMemoModal = ({
             }}
             onUploadImage={() => uploadResourceMutation.mutate()}
           />
+          <View style={styles.noteSearchPanel}>
+            <View style={styles.searchBox}>
+              <Search color="#64748b" size={18} />
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setReplaceQuery}
+                placeholder="查找正文"
+                placeholderTextColor="#94a3b8"
+                style={styles.searchInput}
+                value={replaceQuery}
+              />
+              <Text style={[styles.noteSearchCount, replaceQuery.trim() && replaceMatches.length === 0 && styles.noteSearchCountEmpty]}>{replaceQuery.trim() ? replaceMatches.length : 0}</Text>
+            </View>
+            <View style={styles.searchBox}>
+              <RefreshCw color="#64748b" size={18} />
+              <TextInput
+                autoCapitalize="none"
+                autoCorrect={false}
+                onChangeText={setReplaceValue}
+                placeholder="替换为"
+                placeholderTextColor="#94a3b8"
+                style={styles.searchInput}
+                value={replaceValue}
+              />
+            </View>
+            <ActionButton disabled={replaceMatches.length === 0} label="全部替换" onPress={replaceAllMatches}>
+              <RefreshCw color={replaceMatches.length === 0 ? "#cbd5e1" : "#0f172a"} size={16} />
+            </ActionButton>
+          </View>
           <TextInput
             multiline
             onChangeText={setContentMarkdown}
@@ -4211,6 +4256,16 @@ const getTextSearchMatches = (text: string, query: string) => {
   }
 
   return matches;
+};
+
+const replaceTextMatches = (text: string, matches: Array<{ end: number; start: number }>, replacement: string) => {
+  let nextText = text;
+
+  for (const match of [...matches].reverse()) {
+    nextText = `${nextText.slice(0, match.start)}${replacement}${nextText.slice(match.end)}`;
+  }
+
+  return nextText;
 };
 
 const buildMcpRemoteConfig = (baseUrl: string, token: string) =>
