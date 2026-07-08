@@ -939,6 +939,8 @@ export const WorkspaceScreen = () => {
       />
 
       <NotesActionsModal
+        memoListDensity={memoListDensity}
+        memoSortMode={memoSortMode}
         memoView={memoView}
         onClose={() => setNotesActionsOpen(false)}
         onEnterSelection={() => {
@@ -957,6 +959,8 @@ export const WorkspaceScreen = () => {
           setNotesActionsOpen(false);
           setTagsManagerOpen(true);
         }}
+        onMemoListDensityChange={handleMemoListDensityChange}
+        onSortModeChange={setMemoSortMode}
         onToggleTrash={() => {
           setNotesActionsOpen(false);
           setMemoView(memoView === "trash" ? "notebook" : "trash");
@@ -1210,21 +1214,29 @@ const NotesView = ({
 );
 
 const NotesActionsModal = ({
+  memoListDensity,
+  memoSortMode,
   memoView,
   onClose,
   onEnterSelection,
+  onMemoListDensityChange,
   onOpenApiTokens,
   onOpenResources,
   onOpenTags,
+  onSortModeChange,
   onToggleTrash,
   visible,
 }: {
+  memoListDensity: MobileMemoListDensity;
+  memoSortMode: MemoSortMode;
   memoView: MemoView;
   onClose: () => void;
   onEnterSelection: () => void;
+  onMemoListDensityChange: (density: MobileMemoListDensity) => void;
   onOpenApiTokens: () => void;
   onOpenResources: () => void;
   onOpenTags: () => void;
+  onSortModeChange: (sortMode: MemoSortMode) => void;
   onToggleTrash: () => void;
   visible: boolean;
 }) => (
@@ -1234,6 +1246,17 @@ const NotesActionsModal = ({
         <View style={styles.actionSheetHandle} />
         <Text style={styles.actionSheetTitle}>列表操作</Text>
         <ActionSheetItem icon={<CheckSquare color="#0f172a" size={18} />} label="选择笔记" onPress={onEnterSelection} />
+        <Text style={styles.actionSheetSectionTitle}>显示模式</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <OptionPill active={memoListDensity === "preview"} label="预览" onPress={() => onMemoListDensityChange("preview")} />
+          <OptionPill active={memoListDensity === "compact"} label="紧凑" onPress={() => onMemoListDensityChange("compact")} />
+        </ScrollView>
+        <Text style={styles.actionSheetSectionTitle}>排序方式</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          <OptionPill active={memoSortMode === "updated-desc"} label="最近更新" onPress={() => onSortModeChange("updated-desc")} />
+          <OptionPill active={memoSortMode === "created-desc"} label="创建时间" onPress={() => onSortModeChange("created-desc")} />
+          <OptionPill active={memoSortMode === "title-asc"} label="标题 A-Z" onPress={() => onSortModeChange("title-asc")} />
+        </ScrollView>
         <ActionSheetItem icon={<Tag color="#0f172a" size={18} />} label="标签管理" onPress={onOpenTags} />
         <ActionSheetItem icon={<Archive color="#0f172a" size={18} />} label="资源库" onPress={onOpenResources} />
         <ActionSheetItem
@@ -5201,6 +5224,12 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: "800",
     paddingBottom: 4,
+  },
+  actionSheetSectionTitle: {
+    color: "#64748b",
+    fontSize: 12,
+    fontWeight: "800",
+    paddingTop: 4,
   },
   actionSheetItem: {
     alignItems: "center",
