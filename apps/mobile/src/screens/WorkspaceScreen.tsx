@@ -9,6 +9,8 @@ import {
   BookOpen,
   Bold,
   Check,
+  ChevronLeft,
+  ChevronRight,
   CheckSquare,
   Code,
   Copy,
@@ -2761,6 +2763,16 @@ const ResourcesModal = ({
       (resource.memoExcerpt || "").toLowerCase().includes(query)
     );
   });
+  const imageResources = filteredResources.filter((resource) => resource.kind === "image");
+  const previewIndex = previewResource ? imageResources.findIndex((resource) => resource.id === previewResource.id) : -1;
+  const handlePreviewStep = (direction: -1 | 1) => {
+    if (previewIndex < 0 || imageResources.length < 2) {
+      return;
+    }
+
+    const nextIndex = (previewIndex + direction + imageResources.length) % imageResources.length;
+    setPreviewResource(imageResources[nextIndex]);
+  };
   const handleLayoutChange = (nextLayout: MobileResourceLayoutPreference) => {
     setLayout(nextLayout);
     void writeMobileResourceLayout(nextLayout);
@@ -2871,7 +2883,14 @@ const ResourcesModal = ({
           />
         )}
 
-        <ImagePreviewModal resource={previewResource} onClose={() => setPreviewResource(null)} />
+        <ImagePreviewModal
+          onClose={() => setPreviewResource(null)}
+          onNext={() => handlePreviewStep(1)}
+          onPrevious={() => handlePreviewStep(-1)}
+          resource={previewResource}
+          resourceCount={imageResources.length}
+          resourceIndex={previewIndex}
+        />
       </SafeAreaView>
     </Modal>
   );
@@ -2928,18 +2947,47 @@ const ResourceCard = ({
   );
 };
 
-const ImagePreviewModal = ({ onClose, resource }: { onClose: () => void; resource: ResourceListItem | null }) => (
+const ImagePreviewModal = ({
+  onClose,
+  onNext,
+  onPrevious,
+  resource,
+  resourceCount,
+  resourceIndex,
+}: {
+  onClose: () => void;
+  onNext: () => void;
+  onPrevious: () => void;
+  resource: ResourceListItem | null;
+  resourceCount: number;
+  resourceIndex: number;
+}) => (
   <Modal animationType="fade" transparent visible={Boolean(resource)} onRequestClose={onClose}>
     <View style={styles.previewBackdrop}>
       <View style={styles.previewHeader}>
         <Text numberOfLines={1} style={styles.previewTitle}>
           {resource?.filename || "图片预览"}
         </Text>
+        {resourceCount > 1 && resourceIndex >= 0 ? (
+          <Text style={styles.previewCounter}>
+            {resourceIndex + 1}/{resourceCount}
+          </Text>
+        ) : null}
         <IconButton onPress={onClose}>
           <X color="#0f172a" size={20} />
         </IconButton>
       </View>
       {resource ? <RNImage resizeMode="contain" source={{ uri: resource.url }} style={styles.previewImage} /> : null}
+      {resourceCount > 1 ? (
+        <View style={styles.previewNavRow}>
+          <Pressable accessibilityLabel="上一张" accessibilityRole="button" onPress={onPrevious} style={styles.previewNavButton}>
+            <ChevronLeft color="#ffffff" size={26} />
+          </Pressable>
+          <Pressable accessibilityLabel="下一张" accessibilityRole="button" onPress={onNext} style={styles.previewNavButton}>
+            <ChevronRight color="#ffffff" size={26} />
+          </Pressable>
+        </View>
+      ) : null}
       {resource ? (
         <Pressable onPress={() => openResource(resource)} style={styles.previewOpenButton}>
           <ExternalLink color="#ffffff" size={18} />
@@ -5659,9 +5707,31 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "800",
   },
+  previewCounter: {
+    color: "#475569",
+    fontSize: 12,
+    fontWeight: "800",
+  },
   previewImage: {
     height: "72%",
     width: "100%",
+  },
+  previewNavRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    left: 16,
+    position: "absolute",
+    right: 16,
+  },
+  previewNavButton: {
+    alignItems: "center",
+    backgroundColor: "rgba(15, 23, 42, 0.68)",
+    borderColor: "rgba(255, 255, 255, 0.24)",
+    borderRadius: 24,
+    borderWidth: 1,
+    height: 48,
+    justifyContent: "center",
+    width: 48,
   },
   previewOpenButton: {
     alignItems: "center",
