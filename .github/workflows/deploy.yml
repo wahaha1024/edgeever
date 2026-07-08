@@ -34,7 +34,7 @@ jobs:
       EDGE_EVER_TIANMA_AUTH_PASSWORD_HASH: ${{ secrets.EDGE_EVER_TIANMA_AUTH_PASSWORD_HASH }}
       EDGE_EVER_TIANMA_SESSION_TTL_DAYS: ${{ secrets.EDGE_EVER_TIANMA_SESSION_TTL_DAYS }}
       EDGE_EVER_DEMO_WORKER_NAME: ${{ secrets.EDGE_EVER_DEMO_WORKER_NAME }}
-      EDGE_EVER_DEMO_ROUTE_PATTERN: ${{ secrets.EDGE_EVER_DEMO_ROUTE_PATTERN }}
+      EDGE_EVER_DEMO_CUSTOM_DOMAIN: ${{ secrets.EDGE_EVER_DEMO_CUSTOM_DOMAIN }}
       EDGE_EVER_DEMO_D1_DATABASE_NAME: ${{ secrets.EDGE_EVER_DEMO_D1_DATABASE_NAME }}
       EDGE_EVER_DEMO_D1_DATABASE_ID: ${{ secrets.EDGE_EVER_DEMO_D1_DATABASE_ID }}
       EDGE_EVER_DEMO_R2_BUCKET_NAME: ${{ secrets.EDGE_EVER_DEMO_R2_BUCKET_NAME }}
@@ -55,8 +55,11 @@ jobs:
       - name: Typecheck
         run: bun run typecheck
 
+      - name: Build web app
+        run: bun run build
+
       - name: Deploy tianma instance
-        run: EDGE_EVER_INSTANCE=tianma bun run deploy
+        run: EDGE_EVER_INSTANCE=tianma bun run deploy:worker
 
       - name: Sync tianma auth secret
         run: |
@@ -64,7 +67,7 @@ jobs:
             | EDGE_EVER_INSTANCE=tianma bun scripts/run-wrangler.mjs secret put EDGE_EVER_AUTH_PASSWORD_HASH
 
       - name: Deploy demo instance
-        run: EDGE_EVER_INSTANCE=demo bun run deploy
+        run: EDGE_EVER_INSTANCE=demo bun run deploy:worker
 
       - name: Sync demo auth secret
         run: |
