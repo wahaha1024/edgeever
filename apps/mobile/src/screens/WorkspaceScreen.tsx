@@ -218,7 +218,7 @@ const ALL_TOKEN_SCOPES = [
   "read:tags",
   "write:tags",
 ];
-const ADVANCED_PROMPTS = [
+const ADVANCED_PROMPTS_ZH = [
   {
     id: "persona",
     title: "人物画像",
@@ -236,6 +236,26 @@ const ADVANCED_PROMPTS = [
     title: "标签建议",
     prompt:
       "请通过 EdgeEver MCP 读取我的笔记和现有标签，帮我设计一套更清晰的标签体系。请指出重复、过细、过宽或命名不一致的标签，并给出合并、重命名和新增标签建议。先不要修改笔记，等我确认后再执行。",
+  },
+];
+const ADVANCED_PROMPTS_EN = [
+  {
+    id: "persona",
+    title: "Persona profile",
+    prompt:
+      "Use EdgeEver MCP to read my notes and create a persona profile based on the real note content. Judge only from evidence in the notes, do not make psychological diagnoses, and do not exaggerate traits. Include long-term themes, work preferences, capability signals, recurring problems, recent direction, and list related note titles or memo ids after each conclusion.",
+  },
+  {
+    id: "knowledgeMap",
+    title: "Knowledge map",
+    prompt:
+      "Use EdgeEver MCP to read my notes and organize a knowledge map. Identify the main knowledge areas, key concepts in each area, related notes, what I already understand, and the gaps I still need to fill. Structure the output so it is useful for continued learning and writing.",
+  },
+  {
+    id: "tagAdvice",
+    title: "Tag suggestions",
+    prompt:
+      "Use EdgeEver MCP to read my notes and existing tags, then design a clearer tag system. Point out duplicate, overly narrow, overly broad, or inconsistently named tags, and suggest merges, renames, and new tags. Do not modify notes yet. Wait for my confirmation before applying changes.",
   },
 ];
 const MOBILE_LOCALE_OPTIONS: Array<{ label: string; value: MobileLocalePreference }> = [
@@ -2907,6 +2927,8 @@ const EvernoteGuideModal = ({ onClose, visible }: { onClose: () => void; visible
 
 const AdvancedPlayModal = ({ onClose, visible }: { onClose: () => void; visible: boolean }) => {
   const [copiedPromptId, setCopiedPromptId] = useState<string | null>(null);
+  const localePreference = useMobileLocalePreference();
+  const advancedPrompts = useMemo(() => getMobileAdvancedPrompts(localePreference), [localePreference]);
 
   const copyPrompt = async (promptId: string, prompt: string) => {
     await Clipboard.setStringAsync(prompt);
@@ -2932,7 +2954,7 @@ const AdvancedPlayModal = ({ onClose, visible }: { onClose: () => void; visible:
             <Text style={styles.panelLabel}>复制 Prompt 后，配合 EdgeEver MCP 让 AI 读取真实笔记并输出结构化结果。</Text>
           </View>
 
-          {ADVANCED_PROMPTS.map((item) => (
+          {advancedPrompts.map((item) => (
             <View key={item.id} style={styles.promptCard}>
               <View style={styles.promptCardHeader}>
                 <Text style={styles.panelValue}>{item.title}</Text>
@@ -5304,6 +5326,9 @@ const getResolvedMobileLocale = (localePreference: MobileLocaleMode) =>
 
 const getMobileMemoTemplates = (localePreference: MobileLocaleMode) =>
   getResolvedMobileLocale(localePreference).startsWith("en") ? MOBILE_MEMO_TEMPLATES_EN : MOBILE_MEMO_TEMPLATES_ZH;
+
+const getMobileAdvancedPrompts = (localePreference: MobileLocaleMode) =>
+  getResolvedMobileLocale(localePreference).startsWith("en") ? ADVANCED_PROMPTS_EN : ADVANCED_PROMPTS_ZH;
 
 const formatDate = (value: string, localePreference: MobileLocaleMode = "system") =>
   new Intl.DateTimeFormat(getResolvedMobileLocale(localePreference), {
