@@ -21,7 +21,7 @@ Cloudflare 有两项账号级授权，仓库脚本不能、也不应该绕过：
 1. 为 Fork 安装并授权 **Cloudflare Workers & Pages** GitHub App。Agent 可以打开 Cloudflare 页面完成操作，用户只需确认 GitHub 授权。
 2. 确保 Worker 已有可部署 Worker 且可执行 D1 migration 的 Workers Builds **build token**。若命令提示无法选择 token，请打开 **Worker** -> **Settings** -> **Builds** -> **API token**，创建/选择该 token，将其 UUID 填入 `.env.local` 的 `EDGE_EVER_BUILDS_BUILD_TOKEN_UUID`，然后重试命令。
 
-配置 API 本身还需要一个 user-scoped token，具有 **Workers Builds Configuration: Edit** 与 **Workers Scripts: Read** 权限。按以下步骤创建：
+配置 API 本身必须使用 **User API Token**，不能使用 **Account API Token**：Workers Builds Configuration API 仅接受 user-scoped token。请在 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) 的 **My Profile** -> **API Tokens** 中创建，切勿进入 **Manage Account** -> **Account API Tokens**。它需要 **Workers Builds Configuration: Edit** 与 **Workers Scripts: Read** 权限。按以下步骤创建：
 
 1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)。
 2. 点击 **Create Token** -> **Create Custom Token**。
@@ -29,7 +29,7 @@ Cloudflare 有两项账号级授权，仓库脚本不能、也不应该绕过：
 4. 将 token 限制为当前实例所属的 Cloudflare account，并设置合适的过期时间。
 5. 创建后把值写入 `.env.local`：`EDGE_EVER_BUILDS_API_TOKEN=<token>`。
 
-这个 token 仅供 `bun run deploy:builds:setup` 调用，不会上传到 Worker 或 Cloudflare Builds。只有在现有 `CLOUDFLARE_API_TOKEN` 同为 user-scoped 且具备上述权限时，才可直接复用。
+这个 token 仅供 `bun run deploy:builds:setup` 调用，不会上传到 Worker 或 Cloudflare Builds。只有在现有 `CLOUDFLARE_API_TOKEN` 同为 User API Token 且具备上述权限时，才可直接复用。
 
 ### 手动兜底
 

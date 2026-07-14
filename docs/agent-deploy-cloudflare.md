@@ -107,7 +107,7 @@ Chinese version:
    bun run deploy:builds:setup
    ```
 
-   It reads the fork remote and `.env.local`, then creates or updates the Cloudflare repository connection, production trigger, build commands, cache, watch paths, and build variables. The agent should complete the Cloudflare GitHub App authorization in the browser when available. If Cloudflare requires a build-token choice, use the exact Dashboard path and retry command shown in [Cloudflare Workers Builds](cloudflare-workers-builds.md).
+   It reads the fork remote and `.env.local`, then creates or updates the Cloudflare repository connection, production trigger, build commands, cache, watch paths, and build variables. The configuration API requires a **User API Token** (`My Profile` -> `API Tokens`), not an Account API Token; set it as `EDGE_EVER_BUILDS_API_TOKEN`. The agent should complete the Cloudflare GitHub App authorization in the browser when available. If Cloudflare requires a build-token choice, use the exact Dashboard path and retry command shown in [Cloudflare Workers Builds](cloudflare-workers-builds.md).
 
    Once connected, a GitHub **Sync fork** push automatically migrates and deploys the user's own instance. Do not configure the repository's GitHub Actions Worker deployment for this purpose.
 

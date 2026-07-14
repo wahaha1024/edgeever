@@ -21,14 +21,14 @@ Cloudflare requires two account-level authorizations that cannot be safely autom
 1. Install and authorize the **Cloudflare Workers & Pages** GitHub App for the fork. An Agent can open the Cloudflare dashboard and complete this browser consent; a user only needs to approve the GitHub authorization.
 2. Ensure the Worker has a Workers Builds **build token** with permission to deploy Workers and apply D1 migrations. If the setup command reports that it cannot choose a token, open **Worker** -> **Settings** -> **Builds** -> **API token**, create/select the token, then set its UUID as `EDGE_EVER_BUILDS_BUILD_TOKEN_UUID` in `.env.local` and rerun the command.
 
-The setup API call itself needs a user-scoped token with **Workers Builds Configuration: Edit** and **Workers Scripts: Read**. Create it at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens):
+The setup API call requires a **User API Token**, not an **Account API Token**. Workers Builds Configuration API accepts user-scoped tokens only. Create it at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) under **My Profile** -> **API Tokens** (not **Manage Account** -> **Account API Tokens**) with **Workers Builds Configuration: Edit** and **Workers Scripts: Read**:
 
 1. Select **Create Token** -> **Create Custom Token**.
 2. Under **Account**, add `Workers Builds Configuration: Edit` and `Workers Scripts: Read`.
 3. Restrict the token to the Cloudflare account hosting this instance and set a suitable expiry.
 4. Create it, then put the value in `.env.local` as `EDGE_EVER_BUILDS_API_TOKEN`.
 
-This token is used only by `bun run deploy:builds:setup` and is never uploaded to the Worker or Cloudflare Builds. You may instead reuse `CLOUDFLARE_API_TOKEN` only if it is a user-scoped token with the same permissions.
+This token is used only by `bun run deploy:builds:setup` and is never uploaded to the Worker or Cloudflare Builds. You may instead reuse `CLOUDFLARE_API_TOKEN` only if it is a User API Token with the same permissions.
 
 ### Manual fallback
 
