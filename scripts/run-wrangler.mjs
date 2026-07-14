@@ -199,16 +199,12 @@ if (isDeployCommand && authPasswordHash && !hasSecretsFileArg) {
   finalWranglerArgs.push("--secrets-file", generatedSecretsPath);
 }
 
-const localWrangler = resolve(
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "wrangler.cmd" : "wrangler",
-);
-const executable = existsSync(localWrangler)
-  ? localWrangler
-  : process.platform === "win32"
-    ? "wrangler.cmd"
-    : "wrangler";
+const localWranglerCandidates = process.platform === "win32"
+  ? [resolve("node_modules", ".bin", "wrangler.exe"), resolve("node_modules", ".bin", "wrangler.cmd")]
+  : [resolve("node_modules", ".bin", "wrangler")];
+const localWrangler = localWranglerCandidates.find((candidate) => existsSync(candidate));
+const executable = localWrangler
+  ?? (process.platform === "win32" ? "wrangler.cmd" : "wrangler");
 const result = spawnSync(executable, ["--config", configPath, ...finalWranglerArgs], {
   stdio: "inherit",
   shell: process.platform === "win32",
