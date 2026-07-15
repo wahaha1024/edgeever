@@ -31,19 +31,22 @@ export const getMemoUpdateQueueId = (memoId: string) => `memo.update:${memoId}`;
 export const queueMemoUpdate = async (payload: MemoUpdateSyncPayload) => {
   const id = getMemoUpdateQueueId(payload.memoId);
   const now = new Date().toISOString();
-  const existing = await localDb.syncQueue.get(id);
+  await localDb.transaction("rw", localDb.syncQueue, async () => {
+    const existing = await localDb.syncQueue.get(id);
 
-  await localDb.syncQueue.put({
-    id,
-    kind: "memo.update",
-    memoId: payload.memoId,
-    status: "pending",
-    payload,
-    attemptCount: existing?.attemptCount ?? 0,
-    lastError: null,
-    nextAttemptAt: null,
-    createdAt: existing?.createdAt ?? now,
-    updatedAt: now,
+    await localDb.syncQueue.put({
+      id,
+      kind: "memo.update",
+      memoId: payload.memoId,
+      status: "pending",
+      payload,
+      attemptCount: existing?.attemptCount ?? 0,
+      lastError: null,
+      nextAttemptAt: null,
+      claimId: null,
+      createdAt: existing?.createdAt ?? now,
+      updatedAt: now,
+    });
   });
 };
 
@@ -56,9 +59,36 @@ export const observeSyncQueue = (onChange: (summary: SyncQueueSummary) => void) 
   return () => subscription.unsubscribe();
 };
 
-export const syncQueuedChanges = async (options: {
+export const isMemoUpdateAlreadyApplied = (memo: MemoDetail, item: SyncQueueItem) => {
+  if (memo.id !== item.memoId || memo.title !== item.payload.title) {
+    return false;
+  }
+
+  const remoteTags = [...memo.tags].sort((left, right) => left.localeCompare(right));
+  const queuedTags = [...item.payload.tags].sort((left, right) => left.localeCompare(right));
+  return JSON.stringify(remoteTags) === JSON.stringify(queuedTags) &&
+    JSON.stringify(memo.contentJson) === JSON.stringify(item.payload.contentJson);
+};
+
+let activeSyncPromise: Promise<SyncRunResult> | null = null;
+
+export const syncQueuedChanges = (options: {
   onSynced?: (memo: MemoDetail) => void | Promise<void>;
 } = {}): Promise<SyncRunResult> => {
+  if (activeSyncPromise) {
+    return activeSyncPromise;
+  }
+
+  activeSyncPromise = runQueuedChanges(options).finally(() => {
+    activeSyncPromise = null;
+  });
+
+  return activeSyncPromise;
+};
+
+const runQueuedChanges = async (options: {
+  onSynced?: (memo: MemoDetail) => void | Promise<void>;
+}): Promise<SyncRunResult> => {
   const result: SyncRunResult = {
     attempted: 0,
     synced: 0,
@@ -75,32 +105,38 @@ export const syncQueuedChanges = async (options: {
     .filter((item) => !item.nextAttemptAt || new Date(item.nextAttemptAt) <= now)
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt));
 
-  for (const item of items) {
+  for (const candidate of items) {
+    const item = await claimQueueItem(candidate.id);
+    if (!item) {
+      continue;
+    }
+
     result.attempted += 1;
-    await localDb.syncQueue.update(item.id, {
-      status: "syncing",
-      updatedAt: new Date().toISOString(),
-    });
 
     try {
       const memo = await syncQueueItem(item);
-      await localDb.syncQueue.delete(item.id);
-      await localDb.drafts.delete(item.memoId);
-      await options.onSynced?.(memo);
-      result.synced += 1;
+      const removed = await removeClaimedQueueItem(item);
+      if (removed) {
+        await localDb.drafts.delete(item.memoId);
+        await options.onSynced?.(memo);
+        result.synced += 1;
+      }
     } catch (error) {
       const status = isRevisionConflict(error) ? "conflict" : "error";
       const attemptCount = item.attemptCount + 1;
 
-      await localDb.syncQueue.update(item.id, {
+      const updated = await updateClaimedQueueItem(item, {
         status,
         attemptCount,
         lastError: getErrorMessage(error),
         nextAttemptAt: status === "error" ? nextRetryAt(attemptCount) : null,
+        claimId: null,
         updatedAt: new Date().toISOString(),
       });
 
-      if (status === "conflict") {
+      if (!updated) {
+        continue;
+      } else if (status === "conflict") {
         result.conflicted += 1;
       } else {
         result.failed += 1;
@@ -110,6 +146,46 @@ export const syncQueuedChanges = async (options: {
 
   return result;
 };
+
+const claimQueueItem = (id: string) =>
+  localDb.transaction("rw", localDb.syncQueue, async () => {
+    const item = await localDb.syncQueue.get(id);
+    if (!item || (item.status !== "pending" && item.status !== "error")) {
+      return null;
+    }
+
+    const claimId = crypto.randomUUID();
+    const claimedItem: SyncQueueItem = {
+      ...item,
+      status: "syncing",
+      claimId,
+      updatedAt: new Date().toISOString(),
+    };
+    await localDb.syncQueue.put(claimedItem);
+    return claimedItem;
+  });
+
+const removeClaimedQueueItem = (item: SyncQueueItem) =>
+  localDb.transaction("rw", localDb.syncQueue, async () => {
+    const current = await localDb.syncQueue.get(item.id);
+    if (!current || current.claimId !== item.claimId || current.status !== "syncing") {
+      return false;
+    }
+
+    await localDb.syncQueue.delete(item.id);
+    return true;
+  });
+
+const updateClaimedQueueItem = (item: SyncQueueItem, patch: Partial<SyncQueueItem>) =>
+  localDb.transaction("rw", localDb.syncQueue, async () => {
+    const current = await localDb.syncQueue.get(item.id);
+    if (!current || current.claimId !== item.claimId || current.status !== "syncing") {
+      return false;
+    }
+
+    await localDb.syncQueue.update(item.id, patch);
+    return true;
+  });
 
 export const shouldQueueMemoSaveError = (error: unknown) => {
   if (typeof navigator !== "undefined" && !navigator.onLine) {

@@ -202,33 +202,28 @@ const ensureR2 = (values, name) => {
   return check(`create R2 bucket ${bucketName}`, false);
 };
 
-const ensurePasswordHash = (values) => {
+const ensureAuthPassword = (values) => {
   const currentHash = envValue("AUTH_PASSWORD_HASH", values);
   if (currentHash) {
-    return check("auth password hash", PASSWORD_HASH_PATTERN.test(currentHash), "configured");
+    const valid = PASSWORD_HASH_PATTERN.test(currentHash);
+    return check("auth password hash", valid, valid ? "configured" : "invalid");
   }
 
   const password = process.env.EDGE_EVER_PASSWORD?.trim();
-  if (!password) {
-    return check(
-      "auth password hash",
-      false,
-      "set EDGE_EVER_PASSWORD and rerun setup, or set EDGE_EVER_AUTH_PASSWORD_HASH",
-    );
+  if (password) {
+    upsertEnv(targetKey("AUTH_PASSWORD", values), password);
+    console.log("[ok] configured auth password secret");
+    return true;
   }
 
-  const result = run("bun", ["scripts/hash-password.mjs"], {
-    env: { ...process.env, EDGE_EVER_PASSWORD: password },
-  });
-  if (result.status !== 0) {
-    console.error(result.stderr.trim());
-    return check("generate auth password hash", false);
-  }
-
-  const passwordHash = result.stdout.trim();
-  upsertEnv(targetKey("AUTH_PASSWORD_HASH", values), passwordHash);
-  console.log("[ok] generated auth password hash");
-  return true;
+  const currentPassword = envValue("AUTH_PASSWORD", values);
+  return currentPassword
+    ? check("auth password", true, "configured as a secret")
+    : check(
+        "auth password",
+        false,
+        "set EDGE_EVER_PASSWORD and rerun setup, or set EDGE_EVER_AUTH_PASSWORD",
+      );
 };
 
 const doctor = () => {
@@ -263,11 +258,22 @@ const doctor = () => {
     ) && passed;
 
   const passwordHash = envValue("AUTH_PASSWORD_HASH", values);
+  const password = envValue("AUTH_PASSWORD", values);
+  const passwordHashValid = Boolean(passwordHash && PASSWORD_HASH_PATTERN.test(passwordHash));
+  const passwordConfigured = Boolean(password);
   passed =
     check(
-      "auth password hash",
-      Boolean(passwordHash && PASSWORD_HASH_PATTERN.test(passwordHash)),
-      passwordHash ? "configured" : "missing",
+      "auth password",
+      passwordHash ? passwordHashValid : passwordConfigured,
+      passwordHash
+        ? passwordHashValid
+          ? password
+            ? "hash configured and takes precedence over password secret"
+            : "hash configured"
+          : "invalid password hash; remove or replace it because it takes precedence"
+        : password
+          ? "password secret configured"
+          : "missing",
     ) && passed;
 
   process.exit(passed ? 0 : 1);
@@ -289,7 +295,7 @@ const setup = () => {
   passed = ensureD1(values) && passed;
   passed = ensureR2(values, "R2_BUCKET_NAME") && passed;
   passed = ensureR2(values, "R2_PREVIEW_BUCKET_NAME") && passed;
-  passed = ensurePasswordHash(values) && passed;
+  passed = ensureAuthPassword(values) && passed;
 
   process.exit(passed ? 0 : 1);
 };

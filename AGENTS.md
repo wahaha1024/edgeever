@@ -10,24 +10,29 @@
 
 严禁创建新的 Git 分支；所有修改、提交和推送都必须直接在 `main` 分支上完成。
 
-## Cloudflare 自动部署约束
+## GitHub Issue 与 Release 约束
 
-当用户要求“根据 GitHub 项目链接把本项目安装部署到 Cloudflare”时，应优先按 `docs/agent-deploy-cloudflare.md` 执行。
+正式版本统一遵循 Semantic Versioning。Git 标签与 GitHub Release 标题必须使用完全相同的 `vX.Y.Z` 格式，例如标签和标题都写作 `v0.1.15`；禁止混用 `EdgeEver vX.Y.Z`、中文标题或其他前后缀。常规修复和向后兼容的小功能递增 patch，向后兼容的重要功能递增 minor，破坏性变更递增 major。发布前必须先检查最新 Release 和远端标签，严禁覆盖、移动或重复使用已经发布的版本号。
 
-推荐流程：
+Release 标签必须精确指向 `main` 上经过验证的发布提交。除非用户明确要求，否则应发布为非 Draft、非 Prerelease 的正式版本。发布正文统一使用以下结构：
 
-```sh
-bun install
-EDGE_EVER_PASSWORD='<首次登录密码>' bun run deploy:setup
-bun run deploy:doctor
-bun run deploy
+```md
+## 主要更新
+
+- 面向用户说明本次变化及影响。
+
+关联 Issue：#<issue-number>
+
+## 验证
+
+- 列出实际完成的测试、类型检查和构建结果。
 ```
 
-首次部署与验证成功后，应优先执行 `bun run deploy:builds:setup`，按 `docs/cloudflare-workers-builds.md` 将该 Worker 连接到 Fork 的 `main` 分支，并将 `.env.local` 中的实例配置写入 Cloudflare Workers Builds 的 Build Variables/Secrets。只有 Cloudflare GitHub App 的浏览器授权和 Build Token 选择无法由 API 自动完成；应由 Agent 尽可能代办，并在需要用户确认时给出文档中的精确路径。之后 GitHub Sync fork 触发 Cloudflare 自动构建、执行 D1 migration 并发布；不要为此新增 GitHub Actions Worker 部署流程。
+每个功能或修复 Release 都应关联对应的 GitHub Issue。如果发布前尚无 Issue，应先创建并记录问题、目标与实现结果；Release 正文引用该 Issue，发布成功后在 Issue 中回链 Release，并按实际完成状态关闭。验证失败时不得发布正式 Release。
 
-如果用户没有提供首次登录密码，应只询问这一个必要信息，或在用户同意后生成随机密码。Cloudflare 授权、账号、D1/R2 资源、Worker 名称、自定义域名等私有配置必须来自用户环境、Cloudflare MCP/插件、Wrangler 登录态或 `.env.local`，严禁硬编码到仓库文件。
+## Cloudflare 自动部署约束
 
-部署脚本必须通过 `scripts/run-wrangler.mjs` 读取 `.env.local` 并生成临时 Wrangler 配置。不要直接修改 `wrangler.toml` 来写入个人 `database_id`、bucket 名称、Worker 名称或 route。
+当用户要求根据 GitHub 项目链接将本项目安装部署到 Cloudflare 时，必须先完整阅读并严格按照 `docs/agent-deploy-cloudflare.md` 执行。该文档是此部署流程的唯一操作规范；不要在本文件重复维护部署命令、密码配置或 Workers Builds 步骤。
 
 ## 本地启动约束
 

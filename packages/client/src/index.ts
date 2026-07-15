@@ -2,6 +2,9 @@ import type {
   ApiToken,
   AuthSession,
   CreatedApiToken,
+  JsonBackupMemo,
+  JsonBackupNotebook,
+  JsonBackupRevision,
   MemoDetail,
   MemoEditSession,
   MemoRevision,
@@ -62,6 +65,17 @@ export type NotebookResponse = {
 
 export type ResourceResponse = {
   resource: Resource;
+};
+
+export type MarkdownExportPage = {
+  memos: MemoDetail[];
+  resources: Resource[];
+  totalCount: number;
+  nextOffset: number | null;
+};
+
+export type JsonBackupPage = MarkdownExportPage & {
+  revisions: JsonBackupRevision[];
 };
 
 export class ApiRequestError extends Error {
@@ -273,6 +287,57 @@ export const createEdgeEverClient = (options: EdgeEverClientOptions = {}) => {
       }),
 
     listResources: () => request<ListResourcesResponse>("/api/v1/resources"),
+
+    getMarkdownExportPage: (offset = 0, limit = 50) =>
+      request<MarkdownExportPage>(`/api/v1/exports/markdown?offset=${offset}&limit=${limit}`),
+
+    getJsonBackupPage: (offset = 0, limit = 25) =>
+      request<JsonBackupPage>(`/api/v1/backups/json?offset=${offset}&limit=${limit}`),
+
+    restoreJsonNotebooks: (notebooks: JsonBackupNotebook[]) =>
+      request<{ ok: true }>("/api/v1/restores/json/notebooks", {
+        method: "POST",
+        body: JSON.stringify({ notebooks }),
+      }),
+
+    restoreJsonMemos: (memos: JsonBackupMemo[]) =>
+      request<{ ok: true }>("/api/v1/restores/json/memos", {
+        method: "POST",
+        body: JSON.stringify({ memos }),
+      }),
+
+    restoreJsonResource: (resourceId: string, metadata: JsonBackupMemo["resources"][number], file: Blob) => {
+      const form = new FormData();
+      form.append("metadata", JSON.stringify(metadata));
+      form.append("file", file, metadata.filename || metadata.id);
+      return request<{ ok: true }>(`/api/v1/restores/json/resources/${encodeURIComponent(resourceId)}`, {
+        method: "PUT",
+        body: form,
+      });
+    },
+
+    getResourceBlob: async (resourceUrl: string) => {
+      const headers = new Headers();
+
+      if (options.token) {
+        headers.set("Authorization", `Bearer ${options.token}`);
+      }
+
+      const response = await fetchImpl(`${baseUrl}${resourceUrl}`, {
+        credentials: "include",
+        headers,
+      });
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          options.onUnauthorized?.();
+        }
+
+        throw new ApiRequestError(response.statusText || "Resource download failed", response.status);
+      }
+
+      return response.blob();
+    },
 
     uploadMemoResource: (memoId: string, file: FormData) =>
       request<ResourceResponse>(`/api/v1/memos/${memoId}/resources`, {

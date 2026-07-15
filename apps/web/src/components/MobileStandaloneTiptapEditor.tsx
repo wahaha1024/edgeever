@@ -32,7 +32,7 @@ import {
   type MobileEditorMemoResponse,
   type MobileEditorSaveState,
 } from "@/lib/mobile-editor-standalone";
-import { getMemoUpdateQueueId, queueMemoUpdate, shouldQueueMemoSaveError, syncQueuedChanges } from "@/lib/sync-queue";
+import { getMemoUpdateQueueId, isMemoUpdateAlreadyApplied, queueMemoUpdate, shouldQueueMemoSaveError } from "@/lib/sync-queue";
 
 type ListNotebooksResponse = {
   notebooks: Notebook[];
@@ -121,15 +121,6 @@ export const MobileStandaloneTiptapEditor = ({
       tagsText: draft.tagsText,
       contentJson: draft.contentJson,
       updatedAt: draft.updatedAt,
-    });
-    void queueMemoUpdate({
-      memoId: currentMemo.id,
-      expectedRevision: currentMemo.revision,
-      expectedContentHash: currentMemo.contentHash,
-      editSessionId: editSessionRef.current?.id ?? "",
-      title: draft.title,
-      contentJson: draft.contentJson,
-      tags: parseMobileEditorTags(draft.tagsText),
     });
   }, [draftKey]);
 
@@ -307,18 +298,20 @@ export const MobileStandaloneTiptapEditor = ({
     }
 
     const path = `/api/v1/memos/${encodeURIComponent(currentMemo.id)}/save`;
-    const body = JSON.stringify(buildSavePayload(currentMemo));
+    const payload = buildSavePayload(currentMemo);
+    const body = JSON.stringify(payload);
     const snapshot = currentSnapshot();
+
+    // A direct save supersedes an older retry for this memo. The local draft remains
+    // durable until the server response is confirmed, so removing the retry cannot
+    // lose the user's latest text even if the page is suspended immediately after.
+    void localDb.syncQueue.delete(getMemoUpdateQueueId(currentMemo.id));
 
     if (typeof navigator.sendBeacon === "function") {
       const accepted = navigator.sendBeacon(path, new Blob([body], { type: "application/json" }));
 
       if (accepted) {
         backgroundSavePendingRef.current = true;
-        void Promise.all([
-          localDb.drafts.delete(currentMemo.id),
-          localDb.syncQueue.delete(getMemoUpdateQueueId(currentMemo.id)),
-        ]);
         return true;
       }
     }
@@ -329,8 +322,11 @@ export const MobileStandaloneTiptapEditor = ({
       body,
     })
       .then((data) => applySavedMemo(data.memo, snapshot))
-      .catch(() => {
+      .catch((saveError) => {
         persistLocalDraft();
+        if (shouldQueueMemoSaveError(saveError)) {
+          void queueMemoUpdate({ memoId: currentMemo.id, ...payload });
+        }
         setSaveStateStable("local-draft");
       });
 
@@ -397,22 +393,27 @@ export const MobileStandaloneTiptapEditor = ({
       setSaveStateStable("saving");
       setError(null);
 
-      currentSavePromiseRef.current = (async () => {
-        const data = await requestMobileEditorJson<MobileEditorMemoResponse>(`/api/v1/memos/${encodeURIComponent(currentMemo.id)}`, {
-          method: "PATCH",
-          keepalive,
-          body: JSON.stringify(buildSavePayload(currentMemo)),
-        });
-
-        await applySavedMemo(data.memo, snapshot);
-        return true;
-      })();
+      let payload: ReturnType<typeof buildSavePayload> | null = null;
 
       try {
+        payload = buildSavePayload(currentMemo);
+        await localDb.syncQueue.delete(getMemoUpdateQueueId(currentMemo.id)).catch(() => undefined);
+        currentSavePromiseRef.current = (async () => {
+          const data = await requestMobileEditorJson<MobileEditorMemoResponse>(`/api/v1/memos/${encodeURIComponent(currentMemo.id)}`, {
+            method: "PATCH",
+            keepalive,
+            body: JSON.stringify(payload),
+          });
+
+          await applySavedMemo(data.memo, snapshot);
+          return true;
+        })();
+
         return await currentSavePromiseRef.current;
       } catch (saveError) {
         persistLocalDraft();
-        if (shouldQueueMemoSaveError(saveError)) {
+        if (payload && shouldQueueMemoSaveError(saveError)) {
+          await queueMemoUpdate({ memoId: currentMemo.id, ...payload });
           setError(null);
           setSaveStateStable("local-draft");
           return true;
@@ -643,8 +644,19 @@ export const MobileStandaloneTiptapEditor = ({
         const nextTitle = data.memo.title || "";
         const nextTagsText = Array.isArray(data.memo.tags) ? data.memo.tags.join(", ") : "";
         const nextContentJson = normalizeMobileEditorDoc(data.memo);
-        const draft = await readBestLocalDraft();
-        const queuedUpdate = await localDb.syncQueue.get(getMemoUpdateQueueId(data.memo.id));
+        let draft = await readBestLocalDraft();
+        let queuedUpdate = await localDb.syncQueue.get(getMemoUpdateQueueId(data.memo.id));
+        if (queuedUpdate && isMemoUpdateAlreadyApplied(data.memo, queuedUpdate)) {
+          await Promise.all([
+            localDb.syncQueue.delete(queuedUpdate.id),
+            localDb.drafts.delete(data.memo.id),
+          ]);
+          if (draftKey) {
+            localStorage.removeItem(draftKey);
+          }
+          draft = null;
+          queuedUpdate = undefined;
+        }
         const useDraft = Boolean(draft && (queuedUpdate || Date.parse(draft.updatedAt || "") >= Date.parse(data.memo.updatedAt || "")));
 
         setMemo(data.memo);
@@ -720,42 +732,23 @@ export const MobileStandaloneTiptapEditor = ({
       }
 
       if (document.visibilityState === "visible") {
-        void reconcileBackgroundSave();
-        void syncQueuedChanges({
-          onSynced: (syncedMemo) => {
-            if (syncedMemo.id !== memoRef.current?.id) {
-              return;
-            }
-
-            memoRef.current = syncedMemo;
-            setMemo(syncedMemo);
-            lastSavedSnapshotRef.current = currentSnapshot();
-            dirtyRef.current = false;
-            if (draftKey) {
-              localStorage.removeItem(draftKey);
-            }
-            setSaveStateStable("saved");
-          },
-        });
+        void (async () => {
+          await reconcileBackgroundSave();
+          if (dirtyRef.current && !backgroundSavePendingRef.current) {
+            await saveNowRef.current();
+          }
+        })();
       }
     };
     const handleOnline = () => {
-      void syncQueuedChanges({
-        onSynced: (syncedMemo) => {
-          if (syncedMemo.id !== memoRef.current?.id) {
-            return;
-          }
-
-          memoRef.current = syncedMemo;
-          setMemo(syncedMemo);
-          lastSavedSnapshotRef.current = currentSnapshot();
-          dirtyRef.current = false;
-          if (draftKey) {
-            localStorage.removeItem(draftKey);
-          }
-          setSaveStateStable("saved");
-        },
-      });
+      void (async () => {
+        if (backgroundSavePendingRef.current) {
+          await reconcileBackgroundSave();
+        }
+        if (dirtyRef.current && !backgroundSavePendingRef.current) {
+          await saveNowRef.current();
+        }
+      })();
     };
 
     window.addEventListener("pagehide", handlePageHide);

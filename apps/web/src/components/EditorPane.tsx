@@ -59,7 +59,7 @@ import { docToMarkdown, markdownToDoc, type Notebook, type MemoDetail, type Memo
 import { codeBlockLowlight } from "@/lib/code-block";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { localDb, type MemoUpdateSyncPayload } from "@/lib/local-db";
-import { getMemoUpdateQueueId, queueMemoUpdate, shouldQueueMemoSaveError } from "@/lib/sync-queue";
+import { getMemoUpdateQueueId, isMemoUpdateAlreadyApplied, queueMemoUpdate, shouldQueueMemoSaveError } from "@/lib/sync-queue";
 import {
   getNotebookMoveOptions,
   DEFAULT_MEMO_TITLE,
@@ -717,7 +717,7 @@ const MobileNativeEditorPane = ({
     }
 
     void (async () => {
-      const [draft, queuedUpdate, editSessionResponse] = memo.isDeleted
+      let [draft, queuedUpdate, editSessionResponse] = memo.isDeleted
         ? [null, null, null]
         : await Promise.all([
             localDb.drafts.get(memo.id),
@@ -727,6 +727,15 @@ const MobileNativeEditorPane = ({
 
       if (cancelled) {
         return;
+      }
+
+      if (queuedUpdate && isMemoUpdateAlreadyApplied(memo, queuedUpdate)) {
+        await Promise.all([
+          localDb.syncQueue.delete(queuedUpdate.id),
+          localDb.drafts.delete(memo.id),
+        ]);
+        draft = null;
+        queuedUpdate = undefined;
       }
 
       const draftUpdatedAt = draft ? Date.parse(draft.updatedAt) : 0;
@@ -1640,7 +1649,7 @@ const RichEditorPane = ({
     }
 
     void (async () => {
-      const [draft, queuedUpdate, editSessionResponse] = memo.isDeleted
+      let [draft, queuedUpdate, editSessionResponse] = memo.isDeleted
         ? [null, null, null]
         : await Promise.all([
             localDb.drafts.get(memo.id),
@@ -1650,6 +1659,15 @@ const RichEditorPane = ({
 
       if (cancelled) {
         return;
+      }
+
+      if (queuedUpdate && isMemoUpdateAlreadyApplied(memo, queuedUpdate)) {
+        await Promise.all([
+          localDb.syncQueue.delete(queuedUpdate.id),
+          localDb.drafts.delete(memo.id),
+        ]);
+        draft = null;
+        queuedUpdate = undefined;
       }
 
       const draftUpdatedAt = draft ? Date.parse(draft.updatedAt) : 0;

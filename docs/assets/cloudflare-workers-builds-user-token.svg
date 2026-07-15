@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="500" viewBox="0 0 1200 500" role="img" aria-labelledby="title desc">
+  <title id="title">Cloudflare User API Token permissions for EdgeEver Workers Builds</title>
+  <desc id="desc">A redacted Cloudflare Create Custom Token form. It selects Account Workers Builds Configuration Edit and Account Workers Scripts Read.</desc>
+  <rect width="1200" height="500" fill="#f7f8fa"/>
+  <rect x="70" y="42" width="1060" height="410" rx="10" fill="#fff" stroke="#d8dde5"/>
+  <text x="120" y="100" font-family="Arial, sans-serif" font-size="28" font-weight="700" fill="#1d2733">Create Custom Token</text>
+  <text x="120" y="145" font-family="Arial, sans-serif" font-size="16" fill="#4a5565">Token name</text>
+  <rect x="120" y="160" width="700" height="44" rx="5" fill="#fff" stroke="#8a96a8"/>
+  <text x="136" y="189" font-family="Arial, sans-serif" font-size="17" fill="#273142">edgeever automated deployment</text>
+  <text x="120" y="250" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#1d2733">Permissions</text>
+  <text x="120" y="281" font-family="Arial, sans-serif" font-size="15" fill="#4a5565">Select only these two Account permissions.</text>
+  <g font-family="Arial, sans-serif" font-size="16" fill="#273142">
+    <rect x="120" y="305" width="170" height="46" rx="5" fill="#fff" stroke="#8a96a8"/>
+    <text x="137" y="334">Account</text>
+    <rect x="304" y="305" width="420" height="46" rx="5" fill="#fff" stroke="#8a96a8"/>
+    <text x="321" y="334">Workers Builds Configuration</text>
+    <rect x="738" y="305" width="150" height="46" rx="5" fill="#eef7f4" stroke="#159570"/>
+    <text x="755" y="334" fill="#087257">Edit</text>
+    <rect x="120" y="367" width="170" height="46" rx="5" fill="#fff" stroke="#8a96a8"/>
+    <text x="137" y="396">Account</text>
+    <rect x="304" y="367" width="420" height="46" rx="5" fill="#fff" stroke="#8a96a8"/>
+    <text x="321" y="396">Workers Scripts</text>
+    <rect x="738" y="367" width="150" height="46" rx="5" fill="#eef7f4" stroke="#159570"/>
+    <text x="755" y="396" fill="#087257">Read</text>
+  </g>
+  <text x="926" y="333" font-family="Arial, sans-serif" font-size="15" fill="#687386">User API Token</text>
+  <text x="926" y="394" font-family="Arial, sans-serif" font-size="15" fill="#687386">not Account API Token</text>
+</svg>

@@ -1,6 +1,6 @@
 # Cloudflare 手动部署指南
 
-如果你熟悉 Cloudflare 和命令行，或者想自定义/精细控制部署流程，可以按照以下指南进行手动部署与后续更新。
+如果你熟悉 Cloudflare 和命令行，或者想自定义/精细控制首次安装与资源配置，可以按照以下指南进行手动部署。日常更新统一由 Cloudflare Workers Builds 完成；本地部署仅用于首次安装和紧急修复。
 
 > 💡 **提示**：如果是通过 AI 助手（Claude Code、Codex、Antigravity、Cursor、Trae 等）进行部署，AI 助手应优先参考 [AI Agent Cloudflare Deployment](https://github.com/tianma-if/edgeever/blob/main/docs/agent-deploy-cloudflare.md) 约定。
 
@@ -23,8 +23,8 @@
    # 安装依赖
    bun install
 
-   # 执行部署初始化，并设置首次登录密码
-   EDGE_EVER_PASSWORD='<你的密码>' bun run deploy:setup
+   # 执行部署初始化，默认登录账号密码为 admin / admin123
+   bun run deploy:setup
 
    # 诊断部署环境与配置
    bun run deploy:doctor
@@ -32,6 +32,8 @@
    # 执行部署
    bun run deploy
    ```
+
+   如果希望首次登录就使用自定义密码，可改为执行 `EDGE_EVER_PASSWORD='<你的密码>' bun run deploy:setup`。部署成功后也可以在个人中心修改密码。
 
 ### 完全手动创建 Cloudflare 资源
 
@@ -48,13 +50,10 @@ bunx wrangler d1 create edgeever
 # 手动创建 R2 存储桶
 bunx wrangler r2 bucket create edgeever-resources
 
-# 生成密码 hash（用于后台验证）
-bun run auth:hash -- <你的密码>
-
-# 编辑 .env.local，至少填入刚创建的资源和密码配置
+# 编辑 .env.local，至少填入刚创建的资源配置
 # EDGE_EVER_D1_DATABASE_ID=<D1 创建命令返回的 database_id>
 # EDGE_EVER_R2_BUCKET_NAME=edgeever-resources
-# EDGE_EVER_AUTH_PASSWORD_HASH=<上一步生成的 hash>
+# EDGE_EVER_AUTH_PASSWORD=admin123
 # EDGE_EVER_SESSION_TTL_DAYS=400
 
 # 确认配置完整后再部署
@@ -62,16 +61,22 @@ bun run deploy:doctor
 bun run deploy
 ```
 
-必须在执行 `bun run deploy` **之前**，将 D1 创建命令返回的 `database_id`、R2 bucket 名称和生成的密码 hash 写入本机 `.env.local`。会话有效期建议保留模板中的 `400` 天；服务端也会把更大的值限制为 400 天。
+必须在执行 `bun run deploy` **之前**，将 D1 创建命令返回的 `database_id` 和 R2 bucket 名称写入本机 `.env.local`。模板的初始登录账号密码为 `admin` / `admin123`；如需使用其他初始密码，可修改 `EDGE_EVER_AUTH_PASSWORD`。会话有效期建议保留模板中的 `400` 天；服务端也会把更大的值限制为 400 天。
 
-`bun run deploy` 会构建 Web 应用、执行远程 D1 migration、部署 Worker，并将 `EDGE_EVER_AUTH_PASSWORD_HASH` 作为 Worker Secret 上传。部署脚本还会在成功后通过 `wrangler secret put` 再同步一次该 Secret，确保首次登录可用。部署完成后，请使用 `.env.local` 中的 `EDGE_EVER_AUTH_USERNAME` 和生成 hash 时使用的原始密码登录验证。
+`bun run deploy` 会构建 Web 应用、执行远程 D1 migration、部署 Worker，并将 `EDGE_EVER_AUTH_PASSWORD` 作为 Worker Secret 上传。首次登录成功后，EdgeEver 会将加盐的 PBKDF2-SHA256 哈希写入 D1。已有实例可以继续使用 `EDGE_EVER_AUTH_PASSWORD_HASH`；两个 Secret 同时存在时优先使用哈希。部署完成后，请使用 `.env.local` 中的 `EDGE_EVER_AUTH_USERNAME` 和配置的密码登录验证。
+
+已有实例无需迁移。如果确实要从哈希配置切换为 `EDGE_EVER_AUTH_PASSWORD`，需要同时从 `.env.local`、Workers Builds 和 Worker 运行时 Secrets 中移除旧的 `EDGE_EVER_AUTH_PASSWORD_HASH`，否则旧哈希仍会优先生效。
 
 ---
 
 ## 开启自动更新
 
-首次部署完成后，请按 [Cloudflare Workers Builds 自动部署](cloudflare-workers-builds.zh-CN.md) 将 Worker 连接到 Fork。它是所有 EdgeEver 实例的标准生产发布路径。
+首次部署后，必须将 Worker 连接到 Fork 的 `main` 分支；Cloudflare Workers Builds 是所有 EdgeEver 实例的标准生产发布路径。请先按 [Cloudflare Workers Builds 自动部署](cloudflare-workers-builds.zh-CN.md) 创建仅供配置使用的 **User API Token**（不是 Account API Token），将它私下写入 `.env.local` 的 `EDGE_EVER_BUILDS_API_TOKEN`，然后执行：
 
-一次连接完成后，只需在 Fork 页面点击 **Sync fork**。产生的 push 会自动构建 Web、应用新的远程 D1 migration 并发布 Worker；不需要再配置 GitHub Actions Secrets，也不需要本地重新部署。
+```sh
+bun run deploy:builds:setup
+```
+
+该命令会配置 Git 仓库连接、生产触发器、构建变量和 D1 migration 所需的部署 token。完成后，只需在 Fork 页面点击 **Sync fork**，或推送到 `main`；Cloudflare 会自动构建 Web、应用新的远程 D1 migration 并发布 Worker。不需要 GitHub Actions Secrets，也不需要本地重新部署。
 
 请保留 `bun run deploy` 作为首次安装和紧急修复的入口。

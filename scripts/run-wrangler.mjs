@@ -128,6 +128,7 @@ const runtimeVars = {
   EDGE_EVER_SESSION_TTL_DAYS: envValue("SESSION_TTL_DAYS"),
   EDGE_EVER_R2_BUCKET_NAME: envValue("R2_BUCKET_NAME"),
   EDGE_EVER_DEMO_MODE: envValue("DEMO_MODE"),
+  EDGE_EVER_LOCAL_DEMO_SEED: envValue("LOCAL_DEMO_SEED"),
 };
 const runtimeVarLines = Object.entries(runtimeVars)
   .filter(([, value]) => Boolean(value))
@@ -145,6 +146,11 @@ ${runtimeVarLines.join("\n")}
 const demoMode = envValue("DEMO_MODE")?.toLowerCase();
 if (demoMode && !["true", "false"].includes(demoMode)) {
   throw new Error("EDGE_EVER_DEMO_MODE must be true or false.");
+}
+
+const localDemoSeed = envValue("LOCAL_DEMO_SEED")?.toLowerCase();
+if (localDemoSeed && !["true", "false"].includes(localDemoSeed)) {
+  throw new Error("EDGE_EVER_LOCAL_DEMO_SEED must be true or false.");
 }
 
 if (demoMode === "true") {
@@ -191,11 +197,16 @@ if (changed) {
 
 const isDeployCommand = wranglerArgs.includes("deploy");
 const hasSecretsFileArg = wranglerArgs.some((arg) => arg === "--secrets-file" || arg.startsWith("--secrets-file="));
+const authPassword = envValue("AUTH_PASSWORD");
 const authPasswordHash = envValue("AUTH_PASSWORD_HASH");
+const authSecrets = {
+  ...(authPassword ? { EDGE_EVER_AUTH_PASSWORD: authPassword } : {}),
+  ...(authPasswordHash ? { EDGE_EVER_AUTH_PASSWORD_HASH: authPasswordHash } : {}),
+};
 const finalWranglerArgs = [...wranglerArgs];
 
-if (isDeployCommand && authPasswordHash && !hasSecretsFileArg) {
-  writeFileSync(generatedSecretsPath, `EDGE_EVER_AUTH_PASSWORD_HASH=${authPasswordHash}\n`);
+if (isDeployCommand && Object.keys(authSecrets).length > 0 && !hasSecretsFileArg) {
+  writeFileSync(generatedSecretsPath, `${JSON.stringify(authSecrets, null, 2)}\n`);
   finalWranglerArgs.push("--secrets-file", generatedSecretsPath);
 }
 
@@ -210,23 +221,25 @@ const result = spawnSync(executable, ["--config", configPath, ...finalWranglerAr
   shell: process.platform === "win32",
 });
 
-if (result.status === 0 && isDeployCommand && authPasswordHash) {
-  const secretResult = spawnSync(
-    executable,
-    ["--config", configPath, "secret", "put", "EDGE_EVER_AUTH_PASSWORD_HASH"],
-    {
-      input: authPasswordHash,
-      stdio: ["pipe", "inherit", "inherit"],
-      shell: process.platform === "win32",
-    },
-  );
+if (result.status === 0 && isDeployCommand) {
+  for (const [secretName, secretValue] of Object.entries(authSecrets)) {
+    const secretResult = spawnSync(
+      executable,
+      ["--config", configPath, "secret", "put", secretName],
+      {
+        input: secretValue,
+        stdio: ["pipe", "inherit", "inherit"],
+        shell: process.platform === "win32",
+      },
+    );
 
-  if (secretResult.error) {
-    throw secretResult.error;
-  }
+    if (secretResult.error) {
+      throw secretResult.error;
+    }
 
-  if (secretResult.status !== 0) {
-    process.exit(secretResult.status ?? 1);
+    if (secretResult.status !== 0) {
+      process.exit(secretResult.status ?? 1);
+    }
   }
 }
 

@@ -21,15 +21,28 @@ Cloudflare 有两项账号级授权，仓库脚本不能、也不应该绕过：
 1. 为 Fork 安装并授权 **Cloudflare Workers & Pages** GitHub App。Agent 可以打开 Cloudflare 页面完成操作，用户只需确认 GitHub 授权。
 2. 确保 Worker 已有可部署 Worker 且可执行 D1 migration 的 Workers Builds **build token**。若命令提示无法选择 token，请打开 **Worker** -> **Settings** -> **Builds** -> **API token**，创建/选择该 token，将其 UUID 填入 `.env.local` 的 `EDGE_EVER_BUILDS_BUILD_TOKEN_UUID`，然后重试命令。
 
-配置 API 本身必须使用 **User API Token**，不能使用 **Account API Token**：Workers Builds Configuration API 仅接受 user-scoped token。请在 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) 的 **My Profile** -> **API Tokens** 中创建，切勿进入 **Manage Account** -> **Account API Tokens**。它需要 **Workers Builds Configuration: Edit** 与 **Workers Scripts: Read** 权限。按以下步骤创建：
+配置 API 本身必须使用 **User API Token**，不能使用 **Account API Token**：Workers Builds Configuration API 仅接受 user-scoped token。请在 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) 的 **My Profile** -> **API Tokens** 中创建，切勿进入 **Manage Account** -> **Account API Tokens**。它需要 **Workers Builds Configuration: Edit** 与 **Workers Scripts: Read** 权限。不要选择页面上的任何现成模板（包括 `Edit Cloudflare Workers`），它们不包含 Workers Builds Configuration 权限。按以下实际界面步骤创建：
+
+![Cloudflare User API Token 权限（脱敏界面图）](assets/cloudflare-workers-builds-user-token.svg)
 
 1. 打开 [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens)。
-2. 点击 **Create Token** -> **Create Custom Token**。
-3. 在 **Account** 权限中添加 `Workers Builds Configuration: Edit` 与 `Workers Scripts: Read`。
-4. 将 token 限制为当前实例所属的 Cloudflare account，并设置合适的过期时间。
-5. 创建后把值写入 `.env.local`：`EDGE_EVER_BUILDS_API_TOKEN=<token>`。
+2. 点击 **Create Token**，滚到最下方并选择 **Create Custom Token**。
+3. 给 token 命名，例如 `edgeever自动化部署`。
+4. 第一行权限选择 **Account** -> **Workers Builds Configuration** -> **Edit**；点击 **Add more**。
+5. 第二行选择 **Account** -> **Workers Scripts** -> **Read**。
+6. 在 **Account Resources** 保持 **Include / All accounts**，或限缩到当前实例所属账号；TTL 按自己的安全策略设置。
+7. 点击 **Continue to summary**，确认摘要恰好是 `Workers Builds Configuration: Edit, Workers Scripts: Read`，再点击 **Create Token**。
+8. Cloudflare 只会显示一次 token 值：立即保存到本机 `.env.local`，写为 `EDGE_EVER_BUILDS_API_TOKEN=<token>`，不要提交、截图或发送给他人。
 
 这个 token 仅供 `bun run deploy:builds:setup` 调用，不会上传到 Worker 或 Cloudflare Builds。只有在现有 `CLOUDFLARE_API_TOKEN` 同为 User API Token 且具备上述权限时，才可直接复用。
+
+## Monorepo 构建隔离
+
+Worker 触发器已经排除了仅发生在 `apps/site/*`、`apps/mobile/*`、`apps/extension/*`、`docs/*`、README 文件和 `.github/*` 中的变更。因此，仅改官网不会发布 EdgeEver Worker。
+
+如果这个仓库还部署了 **Git 集成** 的 Cloudflare Pages 官网，请设置 `EDGE_EVER_PAGES_PROJECT_NAME`，再重跑 `bun run deploy:builds:setup`。命令会将 Pages 的 Build watch paths 设为 `apps/site/*`、`bun.lock`、`package.json`；这样仅改产品代码不会重新构建官网。该可选步骤要求 User API Token 额外拥有 **Account** -> **Cloudflare Pages** -> **Edit**。不使用自动化时，在 **Pages 项目** -> **Settings** -> **Build** -> **Build watch paths** 填入同样的路径即可。
+
+Cloudflare 无法为 **Direct Upload（直接上传）** 类型的 Pages 项目设置 Build watch paths；此时应由部署工作流本身过滤路径。本仓库的 `.github/workflows/deploy-site.yml` 已只监听官网、文档及共享构建输入的改动，因此仅改笔记应用不会触发官网部署。
 
 ### 手动兜底
 
@@ -45,9 +58,9 @@ Cloudflare 有两项账号级授权，仓库脚本不能、也不应该绕过：
    Deploy command: bun run deploy:cloudflare-builds
    ```
 
-5. 在 **Settings** -> **Builds** -> **Build variables and secrets** 中，填入初次部署时 `.env.local` 的实例配置；`EDGE_EVER_AUTH_PASSWORD_HASH` 必须保存为 Secret。
+5. 在 **Settings** -> **Builds** -> **Build variables and secrets** 中，填入初次部署时 `.env.local` 的实例配置；推荐将 `EDGE_EVER_AUTH_PASSWORD` 保存为 Build Secret。已有实例可继续将 `EDGE_EVER_AUTH_PASSWORD_HASH` 保存为 Build Secret。
 
-Dashboard 中选中的 Worker 必须与 `EDGE_EVER_WORKER_NAME` 对应。部署命令会根据这些变量生成临时 Wrangler 配置，因此严禁把 D1 ID、R2 bucket、路由或密码 hash 提交进仓库。
+Dashboard 中选中的 Worker 必须与 `EDGE_EVER_WORKER_NAME` 对应。部署命令会根据这些变量生成临时 Wrangler 配置，因此严禁把 D1 ID、R2 bucket、路由、密码或密码 hash 提交进仓库。
 
 ## 必需的构建变量
 
@@ -61,13 +74,15 @@ EDGE_EVER_D1_DATABASE_ID
 EDGE_EVER_R2_BUCKET_NAME
 EDGE_EVER_R2_PREVIEW_BUCKET_NAME
 EDGE_EVER_AUTH_USERNAME
-EDGE_EVER_AUTH_PASSWORD_HASH          # Build Secret
+EDGE_EVER_AUTH_PASSWORD               # Build Secret
 EDGE_EVER_SESSION_TTL_DAYS
 EDGE_EVER_DEMO_MODE                   # 可选
 EDGE_EVER_DEMO_RESET_CRON             # 可选
 EDGE_EVER_CUSTOM_DOMAIN               # 可选
 EDGE_EVER_ROUTE_PATTERN               # 可选
 ```
+
+已经使用 `EDGE_EVER_AUTH_PASSWORD_HASH` 的旧实例可以继续保留该变量，无需改成 `EDGE_EVER_AUTH_PASSWORD`。为兼容已有实例，两个变量同时存在时哈希优先。
 
 多实例场景则设置 `EDGE_EVER_INSTANCE`，并使用 `EDGE_EVER_PROD_D1_DATABASE_ID` 之类的带实例前缀变量。本地部署和 Workers Builds 使用相同的变量解析规则。
 

@@ -4,7 +4,7 @@ export const defaultSiteLocale: SiteLocale = "zh-CN";
 export const siteLocaleStorageKey = "edgeever.site.locale";
 export const siteLocaleDataAttribute = "data-edgeever-site-locale";
 export const siteTaglines = {
-  "zh-CN": "无需服务器、0 费用、开源且原生支持 AI Agent 的自托管『印象笔记』替代品",
+  "zh-CN": "无需服务器、零费用、开源且原生支持 AI Agent 的自托管『印象笔记』替代品",
   "en-US": "A serverless, 100% free, open-source, and AI-native self-hosted Evernote alternative on Cloudflare.",
 } as const satisfies Record<SiteLocale, string>;
 

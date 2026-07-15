@@ -11,6 +11,7 @@ import {
   markdownToDoc,
   isSuspiciousMemoOverwrite,
   isMemoEditBindingValid,
+  JsonBackupResourceMetadataSchema,
   MemoCreateSchema,
   MemoUpdateSchema,
   MergeMemosSchema,
@@ -19,6 +20,8 @@ import {
   TagRenameSchema,
   NotebookCreateSchema,
   NotebookUpdateSchema,
+  RestoreJsonMemosSchema,
+  RestoreJsonNotebooksSchema,
   type ApiToken,
   type CreatedApiToken,
   type MemoDetail,
@@ -26,6 +29,10 @@ import {
   type MemoRevision,
   type MemoSummary,
   type MemoUpdateInput,
+  type JsonBackupMemo,
+  type JsonBackupNotebook,
+  type JsonBackupResource,
+  type JsonBackupRevision,
   type Notebook,
   type NotebookCreateInput,
   type Resource,
@@ -40,15 +47,18 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { cors } from "hono/cors";
 import openApiSpec from "../../../docs/openapi.json";
+import { hasBootstrapCredential, verifyBootstrapPassword } from "./auth-bootstrap";
 
 type Bindings = {
   DB: D1Database;
   RESOURCES: R2Bucket;
   EDGE_EVER_AUTH_USERNAME?: string;
+  EDGE_EVER_AUTH_PASSWORD?: string;
   EDGE_EVER_AUTH_PASSWORD_HASH?: string;
   EDGE_EVER_SESSION_TTL_DAYS?: string;
   EDGE_EVER_R2_BUCKET_NAME?: string;
   EDGE_EVER_DEMO_MODE?: string;
+  EDGE_EVER_LOCAL_DEMO_SEED?: string;
 };
 
 type AuthContext = {
@@ -133,6 +143,8 @@ type MemoRevisionRow = {
   created_by: string;
   created_at: string;
 };
+
+type BackupRevisionRow = MemoRevisionRow;
 
 type MemoEditSessionRow = {
   id: string;
@@ -244,7 +256,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["edgeever", "welcome"],
     isPinned: true,
     markdown:
-      "## 欢迎来到 EdgeEver\n\n这是公开演示环境，可以随便创建、编辑、搜索和合并笔记。\n\n演示环境会每天自动重置，请不要保存私密内容。",
+      "## 欢迎来到 EdgeEver\n\n这是公开演示环境，可以放心创建、编辑、搜索和合并笔记。\n\n> 演示数据会在**每周一凌晨 1:00（北京时间）**重置并恢复这些示例笔记，请不要保存私密内容。\n\n## 3 分钟体验路线\n\n1. 新建一条临时笔记，写下一个想法并添加标签。\n2. 搜索 `workflow`、`全文搜索` 或 `分流`，体验全文搜索和标签筛选。\n3. 打开「富文本与 Markdown 编辑」，试着修改标题、引用或代码块。\n4. 在列表中多选「合并素材：访谈摘录」与「合并素材：竞品观察」，合并成一条长期笔记。\n5. 打开「图片笔记示例」，查看图片资源如何随正文一起保存。\n\n完成后可以随意删除、移动或改写这些笔记；下次重置会恢复初始状态。",
   },
   {
     id: "memo_demo_editor",
@@ -253,7 +265,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["editor", "markdown"],
     isPinned: true,
     markdown:
-      "## 富文本与 Markdown 编辑\n\nEdgeEver 使用 TipTap 保存结构化正文，同时保留 Markdown 和纯文本索引。\n\n- 支持标题、列表、引用和代码块\n- API 和 MCP 可以直接读写 Markdown\n- 搜索使用纯文本索引，不依赖前端编辑器\n\n![EdgeEver 编辑器图片示例](/api/v1/resources/res_demo_editor_image/blob)",
+      "## 富文本与 Markdown 编辑\n\n这条笔记本身就是一个可直接修改的样例：试着改动下面的标题、列表、引用和代码块，然后切换到 Markdown 视图查看对应文本。\n\n### 一份简短清单\n\n- 用标题组织内容层级\n- 用列表拆分行动项\n- 用引用保留原话或关键结论\n\n> 好笔记不是把信息堆起来，而是让下一次找到它时还能立刻行动。\n\n```ts\nconst nextStep = \"把零散想法归入一个笔记本\";\n```\n\nEdgeEver 使用 TipTap 保存结构化正文，同时保留 Markdown 和纯文本索引；API 和 MCP 都可以直接读写 Markdown。\n\n![EdgeEver 编辑器图片示例](/api/v1/resources/res_demo_editor_image/blob)",
   },
   {
     id: "memo_demo_search_tags",
@@ -262,7 +274,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["search", "tags", "workflow"],
     isPinned: false,
     markdown:
-      "## 标签、搜索与归档\n\n这条笔记用于演示标签和全文搜索。你可以搜索 `workflow`、`全文搜索` 或 `EdgeEver`。\n\n建议把临时资料先放入等待分类，再通过标签和笔记本整理。",
+      "## 标签、搜索与归档\n\n这条笔记用于体验标题、正文和标签的不同检索入口。现在就试着搜索：\n\n- `workflow`：命中标签\n- `全文搜索`：命中正文\n- `分流`：命中一个只出现在正文里的关键词\n\n建议先把临时资料放进「等待分类」，再用笔记本承载长期主题、用标签横向连接项目。这样新想法不会堵住入口，资料也不会因为只属于一个项目而被分流遗忘。",
   },
   {
     id: "memo_demo_merge",
@@ -271,7 +283,25 @@ const DEMO_SEED_MEMOS = [
     tags: ["merge", "long-term-note"],
     isPinned: false,
     markdown:
-      "## 多选合并笔记示例\n\n在笔记列表中多选几条笔记后，可以合并为一条长期笔记。原笔记会进入回收站，资源关联会移动到新笔记。\n\n这个能力适合把零散摘录整理成项目总结。",
+      "## 多选合并笔记示例\n\n现在有两条可直接操作的素材：「合并素材：访谈摘录」和「合并素材：竞品观察」。在笔记列表中多选它们，然后合并为一条长期笔记。\n\n合并后，原笔记会进入回收站，资源关联会移动到新笔记。这个能力适合把零散摘录、会议记录或调研片段整理成项目总结。",
+  },
+  {
+    id: "memo_demo_merge_interview",
+    notebookId: "nb_demo_features",
+    title: "合并素材：访谈摘录",
+    tags: ["merge", "research", "workflow"],
+    isPinned: false,
+    markdown:
+      "## 用户访谈摘录\n\n- 用户希望先快速记录，再集中整理。\n- 搜索比文件夹层级更适合回找零散灵感。\n- 重要内容需要沉淀成可持续维护的长期笔记。",
+  },
+  {
+    id: "memo_demo_merge_competitor",
+    notebookId: "nb_demo_features",
+    title: "合并素材：竞品观察",
+    tags: ["merge", "research", "workflow"],
+    isPinned: false,
+    markdown:
+      "## 竞品观察\n\n- 收集入口越轻，越容易形成待整理的资料堆。\n- 用标签连接主题，能减少重复归档。\n- 定期把片段合并成结论，能降低长期维护成本。",
   },
   {
     id: "memo_demo_agent",
@@ -280,7 +310,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["api", "mcp", "agent"],
     isPinned: false,
     markdown:
-      "## Agent-ready\n\nEdgeEver 提供 REST API、OpenAPI schema 和 MCP endpoint。AI Agent 可以读取笔记本、创建笔记、整理标签，并把导入资料迁移到你的自托管实例。\n\nOpenAPI 路径：`/api/openapi.json`",
+      "## Agent-ready：REST API 与 MCP\n\nEdgeEver 提供 REST API、OpenAPI schema 和 MCP endpoint。AI Agent 可以读取笔记本、创建笔记、整理标签，并把导入资料迁移到你的自托管实例。\n\n### 从这里开始\n\n- OpenAPI schema：`/api/openapi.json`\n- MCP endpoint：`/mcp`\n\n一个很小的 Agent 工作流是：先读取「功能演示」笔记本，再把这两条合并素材整理成一条带结论的长期笔记。",
   },
   {
     id: "memo_demo_mobile",
@@ -289,7 +319,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["pwa", "mobile"],
     isPinned: false,
     markdown:
-      "## 移动端与 PWA\n\nEdgeEver 支持桌面三栏工作流，也适配移动端。你可以把站点安装为 PWA，用手机快速记录，再回到桌面整理。",
+      "## 移动端与 PWA\n\nEdgeEver 支持桌面三栏工作流，也适配移动端。你可以把站点安装为 PWA，用手机快速记录，再回到桌面整理。\n\n可以试试：在手机上新建一条「临时想法」，添加 `inbox` 标签；回到桌面后把它移入对应笔记本并补全内容。",
   },
   {
     id: "memo_demo_images",
@@ -298,7 +328,7 @@ const DEMO_SEED_MEMOS = [
     tags: ["image", "attachment", "demo"],
     isPinned: false,
     markdown:
-      "## 图片笔记示例\n\n笔记正文可以直接插入图片。上传后的图片会进入 R2，正文里保存的是资源 URL，API、MCP 和前端编辑器都能读取。\n\n![EdgeEver 图片资源示例](/api/v1/resources/res_demo_gallery_image/blob)\n\n这类笔记适合保存截图、设计稿、读书摘图和临时资料。",
+      "## 图片笔记示例\n\n笔记正文可以直接插入图片。上传后的图片会进入 R2，正文里保存的是资源 URL，API、MCP 和前端编辑器都能读取。\n\n![EdgeEver 图片资源示例](/api/v1/resources/res_demo_gallery_image/blob)\n\n**图注：** 一张图片和它的说明、结论放在同一条笔记里，回看时就不必猜测截图来自哪里。\n\n这类笔记适合保存截图、设计稿、读书摘图和临时资料。",
   },
 ];
 const DEMO_SEED_RESOURCES = [
@@ -356,7 +386,7 @@ app.use(
   cors({
     origin: ["http://127.0.0.1:5173", "http://localhost:5173"],
     allowHeaders: ["Content-Type", "Authorization"],
-    allowMethods: ["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     credentials: true,
   })
 );
@@ -1228,6 +1258,250 @@ app.post("/api/v1/memos/:id/revisions/:revisionId/restore", async (c) => {
   return c.json({ memo: await getMemoDetail(c.env.DB, memoId) });
 });
 
+app.get("/api/v1/exports/markdown", async (c) => {
+  const denied = requireScopes(c, "read:memos", "read:resources");
+
+  if (denied) {
+    return denied;
+  }
+
+  const limit = clampNumber(Number(c.req.query("limit") ?? 50), 1, 100);
+  const offset = clampNumber(Number(c.req.query("offset") ?? 0), 0, 1_000_000);
+  const [memoRows, totalRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+              m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
+              mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
+              m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
+       FROM memos m
+       INNER JOIN memo_contents mc ON mc.memo_id = m.id
+       WHERE m.is_deleted = 0
+       ORDER BY m.created_at ASC, m.id ASC
+       LIMIT ? OFFSET ?`
+    )
+      .bind(limit, offset)
+      .all<MemoDetailRow>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS count FROM memos WHERE is_deleted = 0`).first<{ count: number }>(),
+  ]);
+
+  const memoIds = memoRows.results.map((row) => row.id);
+  let resources: Resource[] = [];
+
+  if (memoIds.length > 0) {
+    const placeholders = memoIds.map(() => "?").join(", ");
+    const resourceRows = await c.env.DB.prepare(
+      `SELECT id, memo_id, original_memo_id, bucket_name, object_key, kind, mime_type,
+              filename, byte_size, sha256, width, height, created_at, updated_at
+       FROM resources
+       WHERE is_deleted = 0 AND memo_id IN (${placeholders})
+       ORDER BY memo_id ASC, created_at ASC, id ASC`
+    )
+      .bind(...memoIds)
+      .all<ResourceRow>();
+    resources = resourceRows.results.map(mapResource);
+  }
+
+  const totalCount = totalRow?.count ?? memoRows.results.length;
+  const nextOffset = offset + memoRows.results.length < totalCount ? offset + memoRows.results.length : null;
+
+  return c.json({
+    memos: memoRows.results.map(mapMemoDetail),
+    resources,
+    totalCount,
+    nextOffset,
+  });
+});
+
+app.get("/api/v1/backups/json", async (c) => {
+  const denied = requireScopes(c, "read:memos", "read:resources");
+
+  if (denied) {
+    return denied;
+  }
+
+  const limit = clampNumber(Number(c.req.query("limit") ?? 25), 1, 50);
+  const offset = clampNumber(Number(c.req.query("offset") ?? 0), 0, 1_000_000);
+  const [memoRows, totalRow] = await Promise.all([
+    c.env.DB.prepare(
+      `SELECT m.id, m.notebook_id, m.title, m.excerpt, m.tags_json, m.is_pinned,
+              m.is_archived, m.is_deleted, m.created_at, m.updated_at, m.deleted_at, mc.revision,
+              mc.content_json, mc.content_markdown, mc.content_text, mc.content_hash,
+              m.source_memo_ids, m.merge_source_count, m.merged_into_memo_id
+       FROM memos m
+       INNER JOIN memo_contents mc ON mc.memo_id = m.id
+       WHERE m.is_deleted = 0
+       ORDER BY m.created_at ASC, m.id ASC
+       LIMIT ? OFFSET ?`
+    )
+      .bind(limit, offset)
+      .all<MemoDetailRow>(),
+    c.env.DB.prepare(`SELECT COUNT(*) AS count FROM memos WHERE is_deleted = 0`).first<{ count: number }>(),
+  ]);
+  const memoIds = memoRows.results.map((row) => row.id);
+  let resources: Resource[] = [];
+  let revisions: JsonBackupRevision[] = [];
+
+  if (memoIds.length > 0) {
+    const placeholders = memoIds.map(() => "?").join(", ");
+    const [resourceRows, revisionRows] = await Promise.all([
+      c.env.DB.prepare(
+        `SELECT id, memo_id, original_memo_id, bucket_name, object_key, kind, mime_type,
+                filename, byte_size, sha256, width, height, created_at, updated_at
+         FROM resources
+         WHERE is_deleted = 0 AND memo_id IN (${placeholders})
+         ORDER BY memo_id ASC, created_at ASC, id ASC`
+      )
+        .bind(...memoIds)
+        .all<ResourceRow>(),
+      c.env.DB.prepare(
+        `SELECT id, memo_id, revision, title, tags_json, content_json, content_markdown,
+                content_text, content_hash, created_by, created_at
+         FROM memo_revisions
+         WHERE memo_id IN (${placeholders})
+         ORDER BY memo_id ASC, revision ASC, created_at ASC`
+      )
+        .bind(...memoIds)
+        .all<BackupRevisionRow>(),
+    ]);
+    resources = resourceRows.results.map(mapResource);
+    revisions = revisionRows.results.map(mapJsonBackupRevision);
+  }
+
+  const totalCount = totalRow?.count ?? memoRows.results.length;
+  const nextOffset = offset + memoRows.results.length < totalCount ? offset + memoRows.results.length : null;
+
+  return c.json({
+    memos: memoRows.results.map(mapMemoDetail),
+    resources,
+    revisions,
+    totalCount,
+    nextOffset,
+  });
+});
+
+app.post("/api/v1/restores/json/notebooks", zValidator("json", RestoreJsonNotebooksSchema), async (c) => {
+  const userOnly = requireUser(c);
+  if (userOnly) {
+    return userOnly;
+  }
+
+  await restoreJsonNotebooks(c.env.DB, c.req.valid("json").notebooks as JsonBackupNotebook[]);
+  return c.json({ ok: true });
+});
+
+app.post("/api/v1/restores/json/memos", zValidator("json", RestoreJsonMemosSchema), async (c) => {
+  const userOnly = requireUser(c);
+  if (userOnly) {
+    return userOnly;
+  }
+
+  await restoreJsonMemos(c.env.DB, c.req.valid("json").memos as JsonBackupMemo[]);
+  return c.json({ ok: true });
+});
+
+app.put("/api/v1/restores/json/resources/:id", async (c) => {
+  const userOnly = requireUser(c);
+  if (userOnly) {
+    return userOnly;
+  }
+
+  const form = await c.req.raw.formData();
+  const file = form.get("file");
+  const metadataValue = form.get("metadata");
+  if (!(file instanceof File) || typeof metadataValue !== "string") {
+    return badRequest(c, "Restore resource file and metadata are required.");
+  }
+
+  let metadataInput: unknown;
+  try {
+    metadataInput = JSON.parse(metadataValue);
+  } catch {
+    return badRequest(c, "Restore resource metadata must be valid JSON.");
+  }
+
+  const parsed = JsonBackupResourceMetadataSchema.safeParse(metadataInput);
+  if (!parsed.success || parsed.data.id !== c.req.param("id")) {
+    return badRequest(c, "Restore resource metadata is invalid.");
+  }
+
+  const metadata = parsed.data as JsonBackupResource;
+  const memo = await getMemoDetail(c.env.DB, metadata.memoId);
+  if (!memo) {
+    return notFound(c, "Restore target memo not found.");
+  }
+
+  const maxBytes = metadata.kind === "image" ? MAX_IMAGE_UPLOAD_BYTES : MAX_ATTACHMENT_UPLOAD_BYTES;
+  if (file.size <= 0 || file.size > maxBytes) {
+    return apiError(c, "upload_too_large", "Backup resource size is invalid.", 413);
+  }
+
+  const filename = normalizeFilename(metadata.filename || file.name) || `${metadata.kind}-${metadata.id}`;
+  const objectKey = `restores/${metadata.memoId}/${metadata.id}/${Date.now()}-${filename}`;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const previous = await c.env.DB.prepare(
+    `SELECT object_key FROM resources WHERE id = ?`
+  ).bind(metadata.id).first<{ object_key: string }>();
+  const originalMemo = metadata.originalMemoId
+    ? await c.env.DB.prepare(`SELECT id FROM memos WHERE id = ?`).bind(metadata.originalMemoId).first<{ id: string }>()
+    : null;
+
+  await c.env.RESOURCES.put(objectKey, bytes, {
+    httpMetadata: { contentType: metadata.mimeType ?? file.type ?? "application/octet-stream" },
+    customMetadata: { memoId: metadata.memoId, resourceId: metadata.id, restored: "true" },
+  });
+
+  try {
+    const now = isoNow();
+    await c.env.DB.prepare(
+      `INSERT INTO resources (
+        id, memo_id, original_memo_id, bucket_name, object_key, kind, mime_type, filename,
+        byte_size, sha256, width, height, metadata_json, is_deleted, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET
+        memo_id = excluded.memo_id,
+        original_memo_id = excluded.original_memo_id,
+        bucket_name = excluded.bucket_name,
+        object_key = excluded.object_key,
+        kind = excluded.kind,
+        mime_type = excluded.mime_type,
+        filename = excluded.filename,
+        byte_size = excluded.byte_size,
+        sha256 = excluded.sha256,
+        width = excluded.width,
+        height = excluded.height,
+        metadata_json = excluded.metadata_json,
+        is_deleted = 0,
+        updated_at = excluded.updated_at,
+        deleted_at = NULL`
+    ).bind(
+      metadata.id,
+      metadata.memoId,
+      originalMemo?.id ?? null,
+      c.env.EDGE_EVER_R2_BUCKET_NAME?.trim() || DEFAULT_R2_BUCKET_NAME,
+      objectKey,
+      metadata.kind,
+      metadata.mimeType ?? file.type ?? null,
+      filename,
+      bytes.byteLength,
+      await sha256Bytes(bytes),
+      metadata.width,
+      metadata.height,
+      JSON.stringify({ source: "edgeever-zip-import" }),
+      metadata.createdAt,
+      now
+    ).run();
+  } catch (error) {
+    await c.env.RESOURCES.delete(objectKey);
+    throw error;
+  }
+
+  if (previous?.object_key && previous.object_key !== objectKey) {
+    await c.env.RESOURCES.delete(previous.object_key);
+  }
+
+  return c.json({ ok: true });
+});
+
 app.get("/api/v1/resources", async (c) => {
   const denied = requireScopes(c, "read:resources");
 
@@ -1933,7 +2207,11 @@ app.post("/mcp", async (c) => {
 });
 
 const worker = {
-  fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
+  async fetch(request: Request, env: Bindings, ctx: ExecutionContext) {
+    if (isLocalDemoSeedEnabled(env)) {
+      await ensureLocalDemoSeed(env);
+    }
+
     return app.fetch(request, env, ctx);
   },
   async scheduled(controller: ScheduledController, env: Bindings, ctx: ExecutionContext) {
@@ -2862,7 +3140,7 @@ const escapeMarkdownImageAlt = (value: string) => value.replace(/[\\[\]]/g, "\\$
 const escapeMarkdownLinkLabel = (value: string) => value.replace(/[\\[\]]/g, "\\$&");
 
 const isAuthRequired = async (env: Bindings) => {
-  if (env.EDGE_EVER_AUTH_PASSWORD_HASH?.trim()) {
+  if (hasBootstrapCredential(env.EDGE_EVER_AUTH_PASSWORD, env.EDGE_EVER_AUTH_PASSWORD_HASH)) {
     return true;
   }
 
@@ -2879,14 +3157,26 @@ const verifyLogin = async (env: Bindings, username: string, password: string): P
   }
 
   const configuredHash = env.EDGE_EVER_AUTH_PASSWORD_HASH?.trim();
+  const configuredPassword = env.EDGE_EVER_AUTH_PASSWORD;
 
-  if (!configuredHash) {
+  if (!configuredHash && !configuredPassword) {
     return null;
   }
 
   const configuredUsername = env.EDGE_EVER_AUTH_USERNAME?.trim() || "admin";
 
-  if (normalizedUsername !== configuredUsername || !(await verifyPassword(password, configuredHash))) {
+  if (normalizedUsername !== configuredUsername) {
+    return null;
+  }
+
+  const passwordMatches = await verifyBootstrapPassword(
+    password,
+    configuredPassword,
+    configuredHash,
+    verifyPassword,
+  );
+
+  if (!passwordMatches) {
     return null;
   }
 
@@ -3299,6 +3589,172 @@ const mapMemoRevision = (row: MemoRevisionRow): MemoRevision => ({
   createdBy: row.created_by,
   createdAt: row.created_at,
 });
+
+const mapJsonBackupRevision = (row: BackupRevisionRow): JsonBackupRevision => ({
+  id: row.id,
+  memoId: row.memo_id,
+  revision: row.revision,
+  title: row.title,
+  tags: parseJsonArray(row.tags_json),
+  contentJson: parseDoc(row.content_json),
+  contentMarkdown: row.content_markdown,
+  contentText: row.content_text,
+  contentHash: row.content_hash,
+  createdBy: row.created_by,
+  createdAt: row.created_at,
+});
+
+const restoreJsonNotebooks = async (db: D1Database, notebooks: JsonBackupNotebook[]) => {
+  const statements = notebooks.map((notebook) =>
+    db.prepare(
+      `INSERT INTO notebooks (
+        id, parent_id, name, slug, icon, color, sort_order, is_deleted, created_at, updated_at, deleted_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL)
+      ON CONFLICT(id) DO UPDATE SET
+        parent_id = excluded.parent_id,
+        name = excluded.name,
+        slug = excluded.slug,
+        icon = excluded.icon,
+        color = excluded.color,
+        sort_order = excluded.sort_order,
+        is_deleted = 0,
+        updated_at = excluded.updated_at,
+        deleted_at = NULL`
+    ).bind(
+      notebook.id,
+      notebook.parentId,
+      notebook.name,
+      notebook.slug,
+      notebook.icon,
+      notebook.color,
+      notebook.sortOrder,
+      notebook.createdAt,
+      notebook.updatedAt
+    )
+  );
+
+  await db.batch(statements);
+};
+
+const restoreJsonMemos = async (db: D1Database, backups: JsonBackupMemo[]) => {
+  for (const backup of backups) {
+    const memo = backup.memo;
+    const contentJson = parseDoc(JSON.stringify(memo.contentJson));
+    const contentMarkdown = memo.contentMarkdown || docToMarkdown(contentJson);
+    const contentText = docToText(contentJson);
+    const contentHash = await sha256(contentMarkdown + JSON.stringify(contentJson));
+    const title = normalizeMemoTitle(memo.title);
+    const tags = normalizeTags(memo.tags);
+
+    if (backup.revisions.some((revision) => revision.memoId !== memo.id)) {
+      throw new AppError("invalid_backup", "A backup revision belongs to a different memo.", 400);
+    }
+
+    await db.batch([
+      db.prepare(
+        `INSERT INTO memos (
+          id, notebook_id, title, excerpt, tags_json, is_pinned, is_archived, is_deleted,
+          source_memo_ids, merge_source_count, merged_into_memo_id,
+          created_by, updated_by, created_at, updated_at, deleted_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, 0, ?, ?, NULL, 'restore', 'restore', ?, ?, NULL)
+        ON CONFLICT(id) DO UPDATE SET
+          notebook_id = excluded.notebook_id,
+          title = excluded.title,
+          excerpt = excluded.excerpt,
+          tags_json = excluded.tags_json,
+          is_pinned = excluded.is_pinned,
+          is_archived = excluded.is_archived,
+          is_deleted = 0,
+          source_memo_ids = excluded.source_memo_ids,
+          merge_source_count = excluded.merge_source_count,
+          merged_into_memo_id = NULL,
+          updated_by = 'restore',
+          updated_at = excluded.updated_at,
+          deleted_at = NULL`
+      ).bind(
+        memo.id,
+        memo.notebookId,
+        title,
+        createExcerpt(contentText),
+        JSON.stringify(tags),
+        memo.isPinned ? 1 : 0,
+        memo.isArchived ? 1 : 0,
+        JSON.stringify(memo.sourceMemoIds),
+        memo.mergeSourceCount,
+        memo.createdAt,
+        memo.updatedAt
+      ),
+      db.prepare(
+        `INSERT INTO memo_contents (
+          memo_id, content_json, content_markdown, content_text, content_hash, revision, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(memo_id) DO UPDATE SET
+          content_json = excluded.content_json,
+          content_markdown = excluded.content_markdown,
+          content_text = excluded.content_text,
+          content_hash = excluded.content_hash,
+          revision = excluded.revision,
+          updated_at = excluded.updated_at`
+      ).bind(
+        memo.id,
+        JSON.stringify(contentJson),
+        contentMarkdown,
+        contentText,
+        contentHash,
+        memo.revision,
+        memo.createdAt,
+        memo.updatedAt
+      ),
+      db.prepare(`DELETE FROM memos_fts WHERE memo_id = ?`).bind(memo.id),
+      db.prepare(
+        `INSERT INTO memos_fts (memo_id, title, content_text, tags) VALUES (?, ?, ?, ?)`
+      ).bind(memo.id, title, contentText, tags.join(" ")),
+      db.prepare(`DELETE FROM memo_revisions WHERE memo_id = ?`).bind(memo.id),
+    ]);
+
+    for (let index = 0; index < backup.revisions.length; index += 50) {
+      const statements = backup.revisions.slice(index, index + 50).map((revision) => {
+        const revisionJson = parseDoc(JSON.stringify(revision.contentJson));
+        const revisionMarkdown = revision.contentMarkdown || docToMarkdown(revisionJson);
+        const revisionText = docToText(revisionJson);
+        return db.prepare(
+          `INSERT INTO memo_revisions (
+            id, memo_id, revision, title, content_json, content_markdown,
+            content_hash, created_by, created_at, tags_json, content_text
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+            memo_id = excluded.memo_id,
+            revision = excluded.revision,
+            title = excluded.title,
+            content_json = excluded.content_json,
+            content_markdown = excluded.content_markdown,
+            content_hash = excluded.content_hash,
+            created_by = excluded.created_by,
+            created_at = excluded.created_at,
+            tags_json = excluded.tags_json,
+            content_text = excluded.content_text`
+        ).bind(
+          revision.id,
+          memo.id,
+          revision.revision,
+          normalizeMemoTitle(revision.title),
+          JSON.stringify(revisionJson),
+          revisionMarkdown,
+          revision.contentHash || "",
+          revision.createdBy,
+          revision.createdAt,
+          JSON.stringify(normalizeTags(revision.tags)),
+          revisionText
+        );
+      });
+      await db.batch(statements);
+    }
+  }
+
+  await audit(db, "user", null, "backup.restore", "backup", createId("restore"), {
+    memoCount: backups.length,
+  });
+};
 
 const mapResource = (row: ResourceRow): Resource => ({
   id: row.id,
@@ -4198,6 +4654,33 @@ const emptyTrashMemosRecord = async (
 };
 
 const isDemoMode = (env: Bindings) => env.EDGE_EVER_DEMO_MODE?.trim().toLowerCase() === "true";
+const isLocalDemoSeedEnabled = (env: Bindings) =>
+  env.EDGE_EVER_LOCAL_DEMO_SEED?.trim().toLowerCase() === "true";
+
+let localDemoSeedPromise: Promise<void> | null = null;
+
+const ensureLocalDemoSeed = (env: Bindings) => {
+  localDemoSeedPromise ??= (async () => {
+    const existingMarker = await env.DB.prepare(
+      `SELECT id FROM audit_events WHERE action = 'demo.local_seed' LIMIT 1`
+    ).first<{ id: string }>();
+
+    if (existingMarker) {
+      return;
+    }
+
+    await ensureDemoSeed(env);
+    await audit(env.DB, "system", null, "demo.local_seed", "demo", "edgeever-local", {
+      seedMemoCount: DEMO_SEED_MEMOS.length,
+      mode: "non-destructive",
+    });
+  })().catch((error) => {
+    localDemoSeedPromise = null;
+    throw error;
+  });
+
+  return localDemoSeedPromise;
+};
 
 const ensureDemoSeed = async (env: Bindings, options: { refreshResources?: boolean } = {}) => {
   const db = env.DB;
