@@ -2497,7 +2497,7 @@ const callMcpTool = async (
       const memo = await createMemoRecord(c.env.DB, {
         notebookId,
         title: getOptionalString(args.title) ?? undefined,
-        contentMarkdown: getOptionalString(args.contentMarkdown) ?? "",
+        contentMarkdown: typeof args.contentMarkdown === "string" ? args.contentMarkdown : "",
         tags: getOptionalStringArray(args.tags),
         createdAt: getOptionalString(args.createdAt) ?? undefined,
         updatedAt: getOptionalString(args.updatedAt) ?? undefined,
@@ -2521,7 +2521,7 @@ const callMcpTool = async (
           notebookId: getOptionalString(args.notebookId) ?? undefined,
           title: getOptionalString(args.title) ?? undefined,
           isPinned: typeof args.isPinned === "boolean" ? args.isPinned : undefined,
-          contentMarkdown: getOptionalString(args.contentMarkdown) ?? undefined,
+          contentMarkdown: typeof args.contentMarkdown === "string" ? args.contentMarkdown : undefined,
           tags: Array.isArray(args.tags) ? getOptionalStringArray(args.tags) : undefined,
           createdAt: getOptionalString(args.createdAt) ?? undefined,
           updatedAt: getOptionalString(args.updatedAt) ?? undefined,
