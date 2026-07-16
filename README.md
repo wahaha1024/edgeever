@@ -37,14 +37,14 @@ The public demo resets every Monday at 1:00 AM (China Standard Time) and restore
 - Batch note merging.
 - Batch note moving, notebook drag sorting, and hierarchy editing.
 - Offline drafts and local sync queue for existing notes.
-- Single-user login with PBKDF2-SHA256 password hashing.
+- Multi-user instances with isolated personal workspaces, owner-managed accounts, and PBKDF2-SHA256 password hashing.
 - Chrome/Edge web clipper is complete and pending store publication.
 
 ## Deployment
 
 ### Deploy with an AI Agent
 
-Copy this prompt into your AI coding assistant, such as Claude Code, Codex, Antigravity, Cursor, or Trae. It covers the first installation and the automatic-update setup:
+Copy this prompt into your AI coding assistant, such as Claude Code, Codex, OpenClaw, Antigravity, Cursor, or Trae. It covers the first installation and the automatic-update setup:
 
 **Recommendation:** Before deployment, configure GitHub and Cloudflare MCP servers, plugins, or other supported integrations for your AI Agent. This allows it to fork the repository, create the required Cloudflare resources, deploy the application, and connect the instance to Cloudflare Workers Builds.
 
@@ -69,6 +69,13 @@ After the first deployment, see [Cloudflare Workers Builds](docs/cloudflare-work
 Please refer to the [Cloudflare Manual Deployment Guide](docs/manual-deploy.md) for first-time manual installation, Cloudflare resource setup, and emergency recovery. After the first deployment, connect Workers Builds; future updates arrive through GitHub **Sync fork** or pushes to `main`.
 
 The automated helper commands are recommended. The template uses `admin` / `admin123` for the initial login, and the password can be changed later in Personal Settings. If you create the Cloudflare resources manually, finish configuring `.env.local`—including the D1 ID, R2 bucket, and the 400-day session limit—before running `bun run deploy`. Existing installations that use `EDGE_EVER_AUTH_PASSWORD_HASH` remain supported. Use that command only for first installation and emergency recovery; Workers Builds handles routine updates.
+
+
+## Multi-Account Login
+
+Once deployed, a single instance supports multi-account login.
+
+The instance administrator can create, disable, or reset member accounts in **Profile** -> **User accounts**. Each member gets a fully isolated personal workspace, including notebooks, notes, attachments, Trash, import/export, and MCP tokens.
 
 
 ## PWA Installation
@@ -110,16 +117,16 @@ Apply local D1 migrations:
 bun run db:migrate:local
 ```
 
-For a fully local development environment, run the command below. It applies pending local migrations and initializes the local D1/R2 stores once with the repository's fixed demo seed. Existing local changes are preserved on later restarts.
-
-```sh
-bun run dev:local
-```
-
-Start local development:
+Start the default development environment. It applies pending local migrations and initializes local D1/R2 stores once with the repository's fixed demo seed. Existing local changes are preserved on later restarts, and no remote instance is contacted.
 
 ```sh
 bun run dev
+```
+
+To intentionally develop against a configured remote instance, select it explicitly:
+
+```sh
+EDGE_EVER_INSTANCE=<name> bun run dev:remote
 ```
 
 Checks:

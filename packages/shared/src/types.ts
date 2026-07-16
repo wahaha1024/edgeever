@@ -117,11 +117,19 @@ export type AuthUser = {
   id: string;
   username: string;
   displayName: string | null;
+  role: "owner" | "member";
+};
+
+export type InstanceUser = AuthUser & {
+  isDisabled: boolean;
+  lastLoginAt: string | null;
+  createdAt: string;
 };
 
 export type AuthSession = {
   authRequired: boolean;
   authenticated: boolean;
+  demoMode: boolean;
   user: AuthUser | null;
   sessionToken?: string;
 };

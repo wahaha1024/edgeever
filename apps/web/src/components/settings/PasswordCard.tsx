@@ -8,9 +8,10 @@ import { ApiRequestError, api } from "@/lib/api";
 
 interface PasswordCardProps {
   authRequired: boolean;
+  demoMode: boolean;
 }
 
-export const PasswordCard = ({ authRequired }: PasswordCardProps) => {
+export const PasswordCard = ({ authRequired, demoMode }: PasswordCardProps) => {
   const { t } = useTranslation();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -65,7 +66,12 @@ export const PasswordCard = ({ authRequired }: PasswordCardProps) => {
         <CardDescription>{t("password.description")}</CardDescription>
       </CardHeader>
       <CardContent className="p-4 pt-0">
-        <form className="grid gap-3" onSubmit={handleSubmit}>
+        {demoMode ? (
+          <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900" role="status">
+            {t("password.demoReadOnly")}
+          </p>
+        ) : (
+          <form className="grid gap-3" onSubmit={handleSubmit}>
           <label className="grid gap-1.5 text-sm font-medium text-slate-700">
             {t("password.currentPassword")}
             <Input
@@ -109,7 +115,8 @@ export const PasswordCard = ({ authRequired }: PasswordCardProps) => {
               {isSubmitting ? t("password.changing") : t("password.change")}
             </Button>
           </div>
-        </form>
+          </form>
+        )}
       </CardContent>
     </Card>
   );

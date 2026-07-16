@@ -159,6 +159,47 @@
         }
       }
     },
+    "/api/v1/users": {
+      "get": {
+        "summary": "List instance users (owner only)",
+        "responses": {
+          "200": {
+            "description": "Instance user list",
+            "content": { "application/json": { "schema": {
+              "type": "object",
+              "properties": { "users": { "type": "array", "items": { "$ref": "#/components/schemas/InstanceUser" } } },
+              "required": ["users"]
+            } } }
+          },
+          "403": { "$ref": "#/components/responses/Error" }
+        }
+      },
+      "post": {
+        "summary": "Create an isolated user workspace (owner only)",
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserCreateInput" } } } },
+        "responses": {
+          "201": { "description": "Created user", "content": { "application/json": { "schema": {
+            "type": "object", "properties": { "user": { "$ref": "#/components/schemas/InstanceUser" } }, "required": ["user"]
+          } } } },
+          "403": { "$ref": "#/components/responses/Error" },
+          "409": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
+    "/api/v1/users/{id}": {
+      "patch": {
+        "summary": "Update, disable, or reset a user (owner only)",
+        "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+        "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/UserUpdateInput" } } } },
+        "responses": {
+          "200": { "description": "Updated user", "content": { "application/json": { "schema": {
+            "type": "object", "properties": { "user": { "$ref": "#/components/schemas/InstanceUser" } }, "required": ["user"]
+          } } } },
+          "403": { "$ref": "#/components/responses/Error" },
+          "404": { "$ref": "#/components/responses/Error" }
+        }
+      }
+    },
     "/api/v1/notebooks": {
       "get": {
         "summary": "List notebooks",
@@ -1237,6 +1278,9 @@
           "authenticated": {
             "type": "boolean"
           },
+          "demoMode": {
+            "type": "boolean"
+          },
           "user": {
             "oneOf": [
               {
@@ -1248,7 +1292,7 @@
             ]
           }
         },
-        "required": ["authRequired", "authenticated", "user"]
+        "required": ["authRequired", "authenticated", "demoMode", "user"]
       },
       "AuthUser": {
         "type": "object",
@@ -1261,9 +1305,45 @@
           },
           "displayName": {
             "type": ["string", "null"]
+          },
+          "role": {
+            "type": "string",
+            "enum": ["owner", "member"]
           }
         },
-        "required": ["id", "username", "displayName"]
+        "required": ["id", "username", "displayName", "role"]
+      },
+      "InstanceUser": {
+        "allOf": [
+          { "$ref": "#/components/schemas/AuthUser" },
+          {
+            "type": "object",
+            "properties": {
+              "isDisabled": { "type": "boolean" },
+              "lastLoginAt": { "type": ["string", "null"], "format": "date-time" },
+              "createdAt": { "type": "string", "format": "date-time" }
+            },
+            "required": ["isDisabled", "lastLoginAt", "createdAt"]
+          }
+        ]
+      },
+      "UserCreateInput": {
+        "type": "object",
+        "properties": {
+          "username": { "type": "string", "minLength": 1, "maxLength": 80 },
+          "displayName": { "type": ["string", "null"], "maxLength": 80 },
+          "password": { "type": "string", "minLength": 8, "maxLength": 512 }
+        },
+        "required": ["username", "password"]
+      },
+      "UserUpdateInput": {
+        "type": "object",
+        "properties": {
+          "displayName": { "type": ["string", "null"], "maxLength": 80 },
+          "password": { "type": "string", "minLength": 8, "maxLength": 512 },
+          "isDisabled": { "type": "boolean" }
+        },
+        "minProperties": 1
       },
       "LoginInput": {
         "type": "object",

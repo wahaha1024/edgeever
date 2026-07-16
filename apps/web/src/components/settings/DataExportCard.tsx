@@ -146,7 +146,7 @@ export const DataExportCard = () => {
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 p-4 pt-0">
-          <div className="grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
+          <div className="grid gap-2 rounded-lg border border-slate-200 bg-card/40 p-3 md:grid-cols-[minmax(0,1fr)_auto] md:items-center">
             <div className="min-w-0">
               <CardDescription className="text-xs leading-5">{t("dataExport.description")}</CardDescription>
             </div>

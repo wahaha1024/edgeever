@@ -25,6 +25,10 @@ const featureArt = [
     icon: "bx:bx-shield-quarter",
     accent: "secure",
   },
+  {
+    icon: "bx:bx-group",
+    accent: "accounts",
+  },
 ];
 
 const features = featureCopy.items.map((item, index) => ({ ...item, ...featureArt[index] }));
@@ -186,6 +190,10 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
                       <em>MCP</em>
                       <em>CLI</em>
                     </div>
+                    <div class="open-zip">
+                      <Icon name="bx:bx-archive" class="h-5 w-5" />
+                      <span>EdgeEver ZIP</span>
+                    </div>
                   </div>
                 )}
 
@@ -219,6 +227,37 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
                     <div class="secure-status">
                       <Icon name="bx:bx-check" class="h-4 w-4" />
                       <span>Auto saved</span>
+                    </div>
+                  </div>
+                )}
+
+                {feature.accent === "accounts" && (
+                  <div class="accounts-scene">
+                    <div class="accounts-instance">
+                      <Icon name="bx:bx-cloud" class="h-8 w-8" />
+                      <span>One instance</span>
+                    </div>
+                    <div class="accounts-link accounts-link-owner"></div>
+                    <div class="accounts-link accounts-link-left"></div>
+                    <div class="accounts-link accounts-link-right"></div>
+                    <div class="account-card account-owner">
+                      <span class="account-avatar"><Icon name="bx:bx-crown" class="h-5 w-5" /></span>
+                      <strong>Owner</strong>
+                      <small>Private workspace</small>
+                    </div>
+                    <div class="account-card account-member-left">
+                      <span class="account-avatar"><Icon name="bx:bx-user" class="h-5 w-5" /></span>
+                      <strong>Member</strong>
+                      <small>Private workspace</small>
+                    </div>
+                    <div class="account-card account-member-right">
+                      <span class="account-avatar"><Icon name="bx:bx-user" class="h-5 w-5" /></span>
+                      <strong>Member</strong>
+                      <small>Private workspace</small>
+                    </div>
+                    <div class="accounts-token">
+                      <Icon name="bx:bx-key" class="h-5 w-5" />
+                      <span>Isolated MCP tokens</span>
                     </div>
                   </div>
                 )}
@@ -261,7 +300,8 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
   .agent-scene,
   .workspace-scene,
   .open-scene,
-  .secure-scene {
+  .secure-scene,
+  .accounts-scene {
     width: min(88%, 460px);
     aspect-ratio: 1.28;
   }
@@ -276,6 +316,7 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
   .open-doc,
   .open-export,
   .open-chips,
+  .open-zip,
   .secure-desktop,
   .secure-phone,
   .secure-sync,
@@ -656,6 +697,22 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
     font-weight: 800;
   }
 
+  .open-zip {
+    top: 1%;
+    right: 3%;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    color: var(--edgeever-brand-text);
+  }
+
+  .open-zip span {
+    font-size: 12px;
+    font-weight: 800;
+  }
+
   .secure-scene {
     transition: transform 300ms ease;
   }
@@ -806,6 +863,132 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
     font-weight: 800;
   }
 
+  .accounts-scene {
+    transition: transform 300ms ease;
+  }
+
+  .group:hover .accounts-scene {
+    transform: translateY(-4px);
+  }
+
+  .accounts-instance,
+  .account-card,
+  .accounts-token {
+    position: absolute;
+    border: 1px solid rgb(203 213 225 / 0.72);
+    background: rgb(255 255 255 / 0.9);
+    box-shadow: 0 18px 60px -42px rgb(15 23 42 / 0.8);
+    backdrop-filter: blur(12px);
+  }
+
+  .accounts-instance {
+    top: 5%;
+    left: 50%;
+    z-index: 2;
+    display: flex;
+    width: 176px;
+    height: 76px;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    translate: -50% 0;
+    border-radius: 24px;
+    color: var(--edgeever-brand-text);
+  }
+
+  .accounts-instance span,
+  .accounts-token span {
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  .accounts-link {
+    position: absolute;
+    top: 27%;
+    z-index: 0;
+    width: 2px;
+    height: 92px;
+    transform-origin: top;
+    background: repeating-linear-gradient(
+      180deg,
+      rgb(var(--edgeever-brand-rgb) / 0.42) 0 9px,
+      transparent 9px 16px
+    );
+  }
+
+  .accounts-link-owner {
+    left: 50%;
+  }
+
+  .accounts-link-left {
+    left: 50%;
+    rotate: 48deg;
+  }
+
+  .accounts-link-right {
+    left: 50%;
+    rotate: -48deg;
+  }
+
+  .account-card {
+    bottom: 15%;
+    z-index: 1;
+    display: grid;
+    width: 132px;
+    min-height: 132px;
+    place-items: center;
+    align-content: center;
+    gap: 7px;
+    padding: 14px;
+    border-radius: 24px;
+    text-align: center;
+  }
+
+  .account-owner {
+    left: 50%;
+    translate: -50% 0;
+  }
+
+  .account-member-left {
+    left: 0;
+  }
+
+  .account-member-right {
+    right: 0;
+  }
+
+  .account-avatar {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 16px;
+    background: rgb(var(--edgeever-brand-rgb) / 0.12);
+    color: var(--edgeever-brand-text);
+  }
+
+  .account-card strong {
+    font-size: 13px;
+    color: #0f172a;
+  }
+
+  .account-card small {
+    font-size: 10px;
+    color: #64748b;
+  }
+
+  .accounts-token {
+    right: 4%;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 14px;
+    border-radius: 999px;
+    color: var(--edgeever-brand-text);
+  }
+
   @media (max-width: 767px) {
     .feature-art {
       padding: 22px;
@@ -815,7 +998,8 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
     .agent-scene,
     .workspace-scene,
     .open-scene,
-    .secure-scene {
+    .secure-scene,
+    .accounts-scene {
       width: min(94%, 360px);
     }
 
@@ -876,6 +1060,10 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
       padding: 6px 9px;
     }
 
+    .open-zip {
+      padding: 8px 11px;
+    }
+
     .secure-desktop {
       width: 230px;
       height: 180px;
@@ -904,6 +1092,29 @@ const features = featureCopy.items.map((item, index) => ({ ...item, ...featureAr
     .secure-status {
       right: 0;
       top: 6%;
+    }
+
+    .account-card {
+      width: 108px;
+      min-height: 118px;
+      padding: 10px;
+    }
+
+    .accounts-instance {
+      width: 156px;
+    }
+
+    .accounts-link-left {
+      rotate: 43deg;
+    }
+
+    .accounts-link-right {
+      rotate: -43deg;
+    }
+
+    .accounts-token {
+      right: 0;
+      padding: 9px 11px;
     }
   }
 </style>

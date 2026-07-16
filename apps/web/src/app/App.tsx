@@ -63,6 +63,7 @@ const AuthenticatedWorkspace = () => {
       queryClient.setQueryData<AuthSession>(["auth", "session"], {
         authRequired: true,
         authenticated: false,
+        demoMode: sessionQuery.data?.demoMode ?? false,
         user: null,
       });
     },
@@ -75,6 +76,7 @@ const AuthenticatedWorkspace = () => {
       queryClient.setQueryData<AuthSession>(["auth", "session"], {
         authRequired: current?.authRequired ?? true,
         authenticated: false,
+        demoMode: current?.demoMode ?? false,
         user: null,
       });
     };
@@ -105,6 +107,7 @@ const AuthenticatedWorkspace = () => {
     <Suspense fallback={<AuthLoadingScreen />}>
       <WorkspaceApp
         authRequired={session.authRequired}
+        demoMode={session.demoMode}
         isLoggingOut={logoutMutation.isPending}
         user={session.user}
         onLogout={() => logoutMutation.mutate()}

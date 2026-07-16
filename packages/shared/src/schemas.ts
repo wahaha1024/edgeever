@@ -67,6 +67,20 @@ export const ChangePasswordSchema = z
     path: ["confirmPassword"],
   });
 
+export const UserCreateSchema = z.object({
+  username: z.string().trim().min(1).max(80),
+  displayName: z.string().trim().max(80).nullable().optional(),
+  password: z.string().min(8).max(512),
+});
+
+export const UserUpdateSchema = z
+  .object({
+    displayName: z.string().trim().max(80).nullable().optional(),
+    password: z.string().min(8).max(512).optional(),
+    isDisabled: z.boolean().optional(),
+  })
+  .refine((input) => Object.keys(input).length > 0, "At least one field is required.");
+
 export const ApiTokenCreateSchema = z.object({
   name: z.string().trim().min(1).max(80),
   scopes: z.array(z.string().trim().min(1).max(80)).min(1).max(32),
@@ -86,5 +100,7 @@ export type DeleteMemosInput = z.infer<typeof DeleteMemosSchema>;
 export type MergeMemosInput = z.infer<typeof MergeMemosSchema>;
 export type LoginInput = z.infer<typeof LoginSchema>;
 export type ChangePasswordInput = z.infer<typeof ChangePasswordSchema>;
+export type UserCreateInput = z.infer<typeof UserCreateSchema>;
+export type UserUpdateInput = z.infer<typeof UserUpdateSchema>;
 export type ApiTokenCreateInput = z.infer<typeof ApiTokenCreateSchema>;
 export type TagRenameInput = z.infer<typeof TagRenameSchema>;

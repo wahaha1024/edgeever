@@ -12,6 +12,8 @@ if (wranglerArgs.length === 0) {
   process.exit(1);
 }
 
+const requestedInstance = process.env.EDGE_EVER_INSTANCE;
+
 const loadLocalEnv = () => {
   const envPath = resolve(".env.local");
   if (!existsSync(envPath)) {
@@ -47,6 +49,13 @@ const loadLocalEnv = () => {
 
 loadLocalEnv();
 
+// An instance selected for this command must take precedence over the default
+// stored in .env.local. Bun loads .env.local before this script starts, so
+// capture the effective process value before the explicit reload above.
+if (requestedInstance !== undefined) {
+  process.env.EDGE_EVER_INSTANCE = requestedInstance;
+}
+
 const baseConfigPath = resolve(process.env.WRANGLER_CONFIG ?? "wrangler.toml");
 const instance = process.env.EDGE_EVER_INSTANCE?.trim();
 const instanceKey = instance?.replace(/[^a-zA-Z0-9]/g, "_").toUpperCase();
@@ -60,6 +69,7 @@ const generatedSecretsPath = resolve(
     ? `.env.wrangler.generated.${instanceKey.toLowerCase()}.secrets`
     : ".env.wrangler.generated.secrets",
 );
+const generatedLocalDevEnvPath = resolve(".env.wrangler.generated.local");
 let config = readFileSync(baseConfigPath, "utf8");
 let changed = false;
 
@@ -177,6 +187,16 @@ custom_domain = ${customDomain ? "true" : "false"}
 
 const isRemoteCommand =
   wranglerArgs.includes("deploy") || wranglerArgs.includes("--remote");
+const isRemoteDevCommand = wranglerArgs.includes("dev") && wranglerArgs.includes("--remote");
+const isLocalDevCommand = wranglerArgs.includes("dev") && wranglerArgs.includes("--local");
+
+if (isRemoteDevCommand && !instance) {
+  console.error(
+    "Remote development requires an explicit instance. Run EDGE_EVER_INSTANCE=<name> bun run dev:remote.",
+  );
+  process.exit(1);
+}
+
 if (isRemoteCommand && config.includes(`database_id = "${PLACEHOLDER_D1_ID}"`)) {
   console.error(
     [
@@ -197,6 +217,7 @@ if (changed) {
 
 const isDeployCommand = wranglerArgs.includes("deploy");
 const hasSecretsFileArg = wranglerArgs.some((arg) => arg === "--secrets-file" || arg.startsWith("--secrets-file="));
+const hasEnvFileArg = wranglerArgs.some((arg) => arg === "--env-file" || arg.startsWith("--env-file="));
 const authPassword = envValue("AUTH_PASSWORD");
 const authPasswordHash = envValue("AUTH_PASSWORD_HASH");
 const authSecrets = {
@@ -204,6 +225,11 @@ const authSecrets = {
   ...(authPasswordHash ? { EDGE_EVER_AUTH_PASSWORD_HASH: authPasswordHash } : {}),
 };
 const finalWranglerArgs = [...wranglerArgs];
+
+if (isLocalDevCommand && !hasEnvFileArg) {
+  writeFileSync(generatedLocalDevEnvPath, "# Intentionally empty: local development must not inherit remote instance secrets.\n");
+  finalWranglerArgs.push("--env-file", generatedLocalDevEnvPath);
+}
 
 if (isDeployCommand && Object.keys(authSecrets).length > 0 && !hasSecretsFileArg) {
   writeFileSync(generatedSecretsPath, `${JSON.stringify(authSecrets, null, 2)}\n`);

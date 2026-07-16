@@ -2,18 +2,41 @@
 // @ts-ignore
 import { Icon } from "astro-icon/components";
 import { Marquee } from "@/components/magicui/marquee";
+
+const isEnglish = Astro.url.pathname === "/en" || Astro.url.pathname.startsWith("/en/");
+const heading = isEnglish
+  ? "Built with a modern, efficient technology stack"
+  : "基于现代且高效的技术栈构建";
+
+const technologies = [
+  { name: "React", icon: "simple-icons:react", hoverClass: "group-hover:text-indigo-600" },
+  { name: "Cloudflare", icon: "simple-icons:cloudflare", hoverClass: "group-hover:text-orange-500" },
+  { name: "Bun", icon: "simple-icons:bun", hoverClass: "group-hover:text-yellow-600" },
+  { name: "Tailwind CSS", icon: "simple-icons:tailwindcss", hoverClass: "group-hover:text-teal-500" },
+  { name: "SQLite", icon: "simple-icons:sqlite", hoverClass: "group-hover:text-blue-500" },
+  { name: "Hono", icon: "simple-icons:hono", hoverClass: "group-hover:text-red-500" },
+] as const;
 ---
 
 <div class="mt-24">
-  <h2 class="text-center text-slate-500 mb-10">基于现代且高效的技术栈构建</h2>
+  <h2 class="mb-10 text-center text-slate-500">{heading}</h2>
   <div class="relative flex w-full flex-col items-center justify-center overflow-hidden">
     <Marquee pauseOnHover className="[--duration:20s]" client:visible>
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-indigo-600 transition mx-8" name="simple-icons:react" title="React" />
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-orange-500 transition mx-8" name="simple-icons:cloudflare" title="Cloudflare" />
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-yellow-600 transition mx-8" name="simple-icons:bun" title="Bun" />
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-teal-500 transition mx-8" name="simple-icons:tailwindcss" title="Tailwind CSS" />
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-blue-500 transition mx-8" name="simple-icons:sqlite" title="SQLite" />
-      <Icon class="size-8 md:size-12 text-slate-400 hover:text-red-500 transition mx-8" name="simple-icons:hono" title="Hono" />
+      {technologies.map((technology) => (
+        <div class="group mx-4 flex min-w-24 flex-col items-center gap-2 md:mx-6">
+          <Icon
+            class:list={[
+              "size-8 text-slate-400 transition-colors md:size-12",
+              technology.hoverClass,
+            ]}
+            name={technology.icon}
+            title={technology.name}
+          />
+          <span class="whitespace-nowrap text-xs font-medium text-slate-500 transition-colors group-hover:text-slate-700 md:text-sm dark:group-hover:text-slate-300">
+            {technology.name}
+          </span>
+        </div>
+      ))}
     </Marquee>
     <!-- Left/Right Mask Gradients for smooth fade out -->
     <div class="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-white dark:from-background"></div>

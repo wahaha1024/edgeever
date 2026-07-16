@@ -3,7 +3,7 @@ import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
 import Placeholder from "@tiptap/extension-placeholder";
-import { docToMarkdown, emptyDoc, type MemoDetail, type MemoEditSession, type Notebook, type TiptapDoc } from "@edgeever/shared";
+import { createExcerpt, docToMarkdown, docToText, emptyDoc, type MemoDetail, type MemoEditSession, type Notebook, type TiptapDoc } from "@edgeever/shared";
 import {
   MobileEditorFallback,
   MobileEditorHeader,
@@ -14,7 +14,11 @@ import {
 import { getNotebookMoveOptions } from "@/lib/app-helpers";
 import { compressImageForUpload } from "@/lib/image-compression";
 import { localDb, type LocalDraft } from "@/lib/local-db";
-import { getStandaloneMobileEditorReturnPath, markStandaloneMobileEditorReturning } from "@/lib/mobile-editor";
+import {
+  getStandaloneMobileEditorReturnPath,
+  markStandaloneMobileEditorReturning,
+  writeMobileEditorReturnPreview,
+} from "@/lib/mobile-editor";
 import {
   DEFAULT_MOBILE_EDITOR_MEMO_TITLE,
   MOBILE_EDITOR_AUTO_SAVE_DELAY_MS,
@@ -448,7 +452,24 @@ export const MobileStandaloneTiptapEditor = ({
     }, MOBILE_EDITOR_AUTO_SAVE_DELAY_MS);
   }, [persistLocalDraft, saveNow, setSaveStateStable]);
 
+  const persistReturnPreview = useCallback(() => {
+    const currentMemo = memoRef.current;
+    if (!currentMemo) {
+      return;
+    }
+
+    writeMobileEditorReturnPreview({
+      memoId: currentMemo.id,
+      baseRevision: currentMemo.revision,
+      title: titleRef.current || null,
+      excerpt: createExcerpt(docToText(contentJsonRef.current)),
+      tags: parseMobileEditorTags(tagsTextRef.current),
+      updatedAt: dirtyRef.current ? new Date().toISOString() : currentMemo.updatedAt,
+    });
+  }, []);
+
   const navigateBack = useCallback(() => {
+    persistReturnPreview();
     markStandaloneMobileEditorReturning(memoId);
 
     if (onLeave) {
@@ -457,7 +478,7 @@ export const MobileStandaloneTiptapEditor = ({
     }
 
     window.location.replace(memoId ? getStandaloneMobileEditorReturnPath(memoId) : "/");
-  }, [memoId, onLeave]);
+  }, [memoId, onLeave, persistReturnPreview]);
 
   const leavePage = useCallback(async () => {
     if (leavingRef.current) {
@@ -714,6 +735,7 @@ export const MobileStandaloneTiptapEditor = ({
           void saveNow({ keepalive: true });
         }
       }
+      persistReturnPreview();
       markStandaloneMobileEditorReturning(memoId);
     };
     const handleVisibilityChange = () => {
@@ -766,7 +788,7 @@ export const MobileStandaloneTiptapEditor = ({
         window.clearTimeout(initialFocusTimerRef.current);
       }
     };
-  }, [currentSnapshot, draftKey, memoId, persistLocalDraft, reconcileBackgroundSave, saveNow, sendBackgroundSave, setSaveStateStable]);
+  }, [currentSnapshot, draftKey, memoId, persistLocalDraft, persistReturnPreview, reconcileBackgroundSave, saveNow, sendBackgroundSave, setSaveStateStable]);
 
   const saveLabel = getMobileEditorSaveLabel(saveState);
   const statusClassName = getMobileEditorStatusClassName(saveState);

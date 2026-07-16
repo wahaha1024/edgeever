@@ -93,9 +93,10 @@ export const siteCopy = {
         },
         {
           title: "数据开放，迁移和导出不被绑架",
-          summary: "笔记内容以结构化 JSON、Markdown 与纯文本多形态保存，便于编辑器、API、搜索和 Agent 分别使用。",
+          summary: "笔记内容以结构化 JSON、Markdown 与纯文本多形态保存，并支持原生 EdgeEver ZIP 导入导出，兼顾编辑、API、搜索、Agent 与完整恢复。",
           points: [
             "内容存放在基于标准 SQLite 的 Cloudflare D1 中，可通过 API、MCP 或 CLI 按需读取。",
+            "支持原生 EdgeEver ZIP 导入导出，归档包含 Markdown、Front Matter、嵌套笔记本结构、附件与历史版本，可跨实例完整恢复。",
             "支持印象笔记数据导入能力，降低从旧笔记库迁移过来的成本。",
             "Markdown 面向导入导出和 Agent 使用，降低未来再次迁移的成本。",
           ],
@@ -107,6 +108,15 @@ export const siteCopy = {
             "不限登录设备数：个人独享自建 API，再也不受商业笔记平台的“只允许登录 2 台设备”等限制。",
             "支持 PC 与移动端网页访问，也可以安装成 PWA，随手打开就能记。",
             "已有笔记支持离线编辑草稿和本地同步队列，弱网时也能先写后同步。",
+          ],
+        },
+        {
+          title: "一个实例，多账户独立空间",
+          summary: "为家人或小团队成员创建账号，每个人都拥有彼此隔离的私人笔记工作区。",
+          points: [
+            "实例管理员可以创建、停用成员账号或重置密码，实例不开放公众注册。",
+            "每个成员的笔记本、笔记、附件、回收站和导入导出数据完全隔离。",
+            "MCP Token 也按成员空间隔离，AI Agent 只能访问被明确授权的数据。",
           ],
         },
       ],
@@ -205,9 +215,10 @@ export const siteCopy = {
         },
         {
           title: "Open data, easier migration",
-          summary: "Notes are stored as structured JSON, Markdown, and plain text for editors, APIs, search, and agents.",
+          summary: "Notes remain available as structured JSON, Markdown, and plain text, with native EdgeEver ZIP import and export for editing, APIs, search, agents, and complete recovery.",
           points: [
             "Content lives in Cloudflare D1, based on standard SQLite, and can be read via API, MCP, or CLI.",
+            "Native EdgeEver ZIP import and export includes Markdown, Front Matter, nested notebooks, attachments, and revision history for complete recovery between instances.",
             "Evernote import support lowers the cost of moving from an existing notes library.",
             "Markdown keeps import, export, and agent workflows portable.",
           ],
@@ -219,6 +230,15 @@ export const siteCopy = {
             "No device limits: self-hosted API means no commercial restrictions on the number of active login devices.",
             "Open it in the browser or install it as a PWA for quick capture.",
             "Existing notes support offline drafts and a local sync queue for weak network conditions.",
+          ],
+        },
+        {
+          title: "One instance, isolated accounts",
+          summary: "Create accounts for family or a small team while giving each person a separate private notes workspace.",
+          points: [
+            "The owner can create or disable member accounts and reset passwords; public registration stays closed.",
+            "Each member has isolated notebooks, notes, attachments, Trash, and import/export data.",
+            "MCP tokens are isolated by workspace, so AI Agents only access explicitly authorized data.",
           ],
         },
       ],

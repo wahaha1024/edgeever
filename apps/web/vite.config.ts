@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath, URL } from "node:url";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
+import { resolveAppVersion } from "./build-metadata";
 
 const readPackageVersion = () => {
   try {
@@ -25,12 +26,20 @@ const readGitCommit = () => {
   }
 };
 
+const readGitDescription = () => {
+  try {
+    return execSync('git describe --tags --long --match "v[0-9]*.[0-9]*.[0-9]*" HEAD', { encoding: "utf8" }).trim();
+  } catch {
+    return null;
+  }
+};
+
 const buildId = process.env.WORKERS_CI_COMMIT_SHA?.slice(0, 12)
   ?? process.env.CF_PAGES_COMMIT_SHA?.slice(0, 12)
   ?? process.env.GITHUB_SHA?.slice(0, 12)
   ?? readGitCommit()
   ?? "local";
-const appVersion = readPackageVersion();
+const appVersion = resolveAppVersion(readPackageVersion(), readGitDescription());
 
 export default defineConfig({
   root: "apps/web",

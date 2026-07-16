@@ -1,5 +1,6 @@
 import type {
   AuthSession,
+  InstanceUser,
   ApiToken,
   CreatedApiToken,
   JsonBackupMemo,
@@ -45,6 +46,9 @@ type ListApiTokensResponse = {
   apiTokens: ApiToken[];
   availableScopes: string[];
 };
+
+type ListUsersResponse = { users: InstanceUser[] };
+type UserResponse = { user: InstanceUser };
 
 type MemoResponse = {
   memo: MemoDetail;
@@ -124,6 +128,20 @@ export const api = {
   changePassword: (payload: { currentPassword: string; newPassword: string; confirmPassword: string }) =>
     request<{ ok: true }>("/api/v1/auth/change-password", {
       method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  listUsers: () => request<ListUsersResponse>("/api/v1/users"),
+
+  createUser: (payload: { username: string; displayName?: string | null; password: string }) =>
+    request<UserResponse>("/api/v1/users", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    }),
+
+  updateUser: (userId: string, payload: { displayName?: string | null; password?: string; isDisabled?: boolean }) =>
+    request<UserResponse>(`/api/v1/users/${userId}`, {
+      method: "PATCH",
       body: JSON.stringify(payload),
     }),
 
