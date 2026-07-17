@@ -304,6 +304,8 @@ export const enUS = {
     deletedCount: "{{count}} deleted",
     constrainedCount: "{{label}} · {{count}} notes",
     searchConstraint: "Search “{{query}}”",
+    searchActive: "Searching",
+    searchResults: "{{count}} results",
     filterConstraint: "Filter: {{label}}",
     reset: "Reset",
     fetchingLatest: "Fetching latest notes",

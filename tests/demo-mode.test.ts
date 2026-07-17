@@ -1,5 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { isDemoModeEnabled, resolveDemoPasswordHash } from "../apps/api/src/demo-mode";
+import {
+  isDemoModeEnabled,
+  resolveDemoPasswordHash,
+  shouldUpsertDemoSeedRecord,
+} from "../apps/api/src/demo-mode";
 
 describe("demo mode policy", () => {
   test("only enables demo policy for an explicit true value", () => {
@@ -18,5 +22,13 @@ describe("demo mode policy", () => {
     const hashPassword = async (password: string) => `hashed:${password}`;
     expect(await resolveDemoPasswordHash("demo-password", undefined, hashPassword)).toBe("hashed:demo-password");
     expect(await resolveDemoPasswordHash(undefined, undefined, hashPassword)).toBeNull();
+  });
+
+  test("does not overwrite existing seed records during ordinary demo reads", () => {
+    const existingIds = new Set(["memo_welcome"]);
+
+    expect(shouldUpsertDemoSeedRecord(existingIds, "memo_welcome", false)).toBe(false);
+    expect(shouldUpsertDemoSeedRecord(existingIds, "memo_missing", false)).toBe(true);
+    expect(shouldUpsertDemoSeedRecord(existingIds, "memo_welcome", true)).toBe(true);
   });
 });

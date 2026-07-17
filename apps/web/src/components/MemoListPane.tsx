@@ -511,7 +511,8 @@ export const MemoListPane = ({
   const selectionToggleTitle = canToggleVisibleMemoSelection ? visibleSelectionToggleLabel : t("memoList.noSelectableInList");
   const moveTargetTitle =
     view === "trash" ? t("workspace.selection.trashCannotMove") : notebooks.length === 0 ? t("workspace.selection.noMovableNotebook") : isMoving ? t("workspace.selection.moving") : t("memoList.moveToNotebook");
-  const hasListConstraint = Boolean(search.trim()) || filterMode !== "all";
+  const searchActive = Boolean(search.trim());
+  const hasListConstraint = searchActive || filterMode !== "all";
   const activeFilterLabel = filterOptions.find((option) => option.value === filterMode)?.label ?? t("options.memoFilter.all");
   const activeSortLabel = memoSortOptions.find((option) => option.value === sortMode)?.label ?? t("options.memoSort.updatedDesc");
   const syncMemosTitle = !canSyncMemos
@@ -928,11 +929,19 @@ export const MemoListPane = ({
             >
               <ChevronLeft className="h-5 w-5" />
             </button>
-            <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-slate-200 bg-white px-3 text-sm text-slate-500 shadow-[0_8px_18px_rgba(15,23,42,0.05)]">
-              <Search className="h-4 w-4 shrink-0" />
+            <div
+              className={cn(
+                "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border bg-white px-3 text-sm shadow-[0_8px_18px_rgba(15,23,42,0.05)] transition",
+                searchActive
+                  ? "border-emerald-400 bg-emerald-50/80 text-emerald-700 ring-2 ring-emerald-200/70"
+                  : "border-slate-200 text-slate-500"
+              )}
+            >
+              <Search className={cn("h-4 w-4 shrink-0", searchActive && "text-emerald-600")} />
               <input
                 ref={mobileSearchInputRef}
-                type="search"
+                type="text"
+                role="searchbox"
                 value={search}
                 autoCapitalize="none"
                 autoComplete="off"
@@ -1209,11 +1218,19 @@ export const MemoListPane = ({
         </div>
 
         <div className={cn("items-center gap-2", mobileSearchActive ? "hidden lg:flex" : "flex")}>
-          <div className="flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border border-transparent bg-slate-100 px-3 text-sm text-slate-500 transition focus-within:border-slate-300 focus-within:bg-white focus-within:ring-2 focus-within:ring-slate-400/20 lg:rounded-md lg:border-slate-200 lg:bg-slate-50">
-            <Search className="h-4 w-4" />
+          <div
+            className={cn(
+              "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-full border px-3 text-sm transition focus-within:ring-2 lg:rounded-md",
+              searchActive
+                ? "border-emerald-400 bg-emerald-50/80 text-emerald-700 shadow-[0_0_0_1px_rgba(52,211,153,0.18)] ring-1 ring-emerald-200 focus-within:border-emerald-500 focus-within:bg-white focus-within:ring-emerald-300/50"
+                : "border-transparent bg-slate-100 text-slate-500 focus-within:border-slate-300 focus-within:bg-white focus-within:ring-slate-400/20 lg:border-slate-200 lg:bg-slate-50"
+            )}
+          >
+            <Search className={cn("h-4 w-4 shrink-0", searchActive && "text-emerald-600")} />
             <input
               ref={searchInputRef}
-              type="search"
+              type="text"
+              role="searchbox"
               value={search}
               autoCapitalize="none"
               autoComplete="off"
@@ -1266,21 +1283,38 @@ export const MemoListPane = ({
         </div>
 
         {hasListConstraint && (
-          <div className="mt-3 flex min-h-8 items-center gap-2 rounded-md border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-500">
-            <span className="min-w-0 flex-1 truncate">
-              {t("memoList.constrainedCount", {
-                label: search.trim()
-                  ? t("memoList.searchConstraint", { query: search.trim() })
-                  : t("memoList.filterConstraint", { label: activeFilterLabel }),
-                count: totalMemoCount,
-              })}
+          <div
+            className={cn(
+              "mt-3 flex min-h-8 items-center gap-2 rounded-md border px-3 py-1.5 text-xs",
+              searchActive
+                ? "border-emerald-200 bg-emerald-50 text-emerald-800 shadow-[inset_3px_0_0_#10b981]"
+                : "border-slate-200 bg-white text-slate-500"
+            )}
+            role="status"
+          >
+            {searchActive && (
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-2 py-1 font-semibold text-white">
+                <Search className="h-3 w-3" />
+                {t("memoList.searchActive")}
+              </span>
+            )}
+            <span className="min-w-0 flex-1 truncate font-medium">
+              {searchActive
+                ? t("memoList.searchResults", { count: totalMemoCount })
+                : t("memoList.constrainedCount", {
+                    label: t("memoList.filterConstraint", { label: activeFilterLabel }),
+                    count: totalMemoCount,
+                  })}
             </span>
             <button
-              className="shrink-0 font-semibold text-slate-600 transition hover:text-slate-950"
+              className={cn(
+                "shrink-0 font-semibold transition",
+                searchActive ? "text-emerald-800 hover:text-emerald-950" : "text-slate-600 hover:text-slate-950"
+              )}
               type="button"
-              onClick={handleResetListConstraints}
+              onClick={searchActive ? handleClearSearch : handleResetListConstraints}
             >
-              {t("memoList.reset")}
+              {searchActive ? t("memoList.cancelSearch") : t("memoList.reset")}
             </button>
           </div>
         )}

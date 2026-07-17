@@ -1,6 +1,7 @@
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
+import { createInterface } from "node:readline/promises";
 
 const command = process.argv[2] ?? "setup";
 const dryRun = process.argv.includes("--dry-run");
@@ -60,6 +61,7 @@ const gitRepository = () => {
   return { owner: match[1], repository: match[2] };
 };
 
+// Keep the generic token as a silent fallback for existing installations and CI.
 const cfToken = value("EDGE_EVER_BUILDS_API_TOKEN") || value("CLOUDFLARE_API_TOKEN");
 const accountId = value("CLOUDFLARE_ACCOUNT_ID");
 const workerName = instanceValue("WORKER_NAME");
@@ -173,12 +175,66 @@ const configurePagesWatchPaths = async () => {
   }
 };
 
+const selectBuildToken = async (buildTokens, existingTrigger) => {
+  const tokens = Array.isArray(buildTokens)
+    ? buildTokens.filter((token) => token?.build_token_uuid)
+    : [];
+
+  // Keep accepting the old environment variable so existing installations do
+  // not break, but do not expose Cloudflare's internal UUID in the new setup UX.
+  const legacyBuildTokenUuid = value("EDGE_EVER_BUILDS_BUILD_TOKEN_UUID");
+  if (legacyBuildTokenUuid) {
+    const legacyToken = tokens.find((token) => token.build_token_uuid === legacyBuildTokenUuid);
+    if (legacyToken) return legacyToken;
+    throw new Error(
+      "The API token configured by the legacy EDGE_EVER_BUILDS_BUILD_TOKEN_UUID setting no longer exists. Remove that setting and rerun the command.",
+    );
+  }
+
+  const existingToken = existingTrigger?.build_token_uuid
+    ? tokens.find((token) => token.build_token_uuid === existingTrigger.build_token_uuid)
+    : undefined;
+  if (existingToken) return existingToken;
+
+  if (tokens.length === 1) return tokens[0];
+  if (tokens.length === 0) {
+    throw new Error(
+      "No Workers Builds API token was found. In Cloudflare Dashboard open this Worker -> Settings -> Builds -> API token, create or select an API token with D1 edit permission, then rerun the command.",
+    );
+  }
+
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new Error(
+      `Multiple Workers Builds API tokens are available (${tokens.map((token) => token.build_token_name || "Unnamed token").join(", ")}). Rerun this command in an interactive terminal and select one.`,
+    );
+  }
+
+  console.log("Multiple Workers Builds API tokens are available:");
+  tokens.forEach((token, index) => {
+    console.log(`  ${index + 1}. ${token.build_token_name || "Unnamed token"}`);
+  });
+
+  const prompt = createInterface({ input: process.stdin, output: process.stdout });
+  try {
+    while (true) {
+      const answer = (await prompt.question(`Select an API token [1-${tokens.length}]: `)).trim();
+      const selectedIndex = Number(answer) - 1;
+      if (Number.isInteger(selectedIndex) && selectedIndex >= 0 && selectedIndex < tokens.length) {
+        return tokens[selectedIndex];
+      }
+      console.log("Enter the number shown next to the API token you want to use.");
+    }
+  } finally {
+    prompt.close();
+  }
+};
+
 const setup = async () => {
   if (!accountId) throw new Error("Missing CLOUDFLARE_ACCOUNT_ID.");
   if (!workerName) throw new Error("Missing EDGE_EVER_WORKER_NAME.");
   if (!cfToken) {
     throw new Error(
-      "Missing EDGE_EVER_BUILDS_API_TOKEN (or CLOUDFLARE_API_TOKEN). It must be a user-scoped token with Workers Builds Configuration: Edit and Workers Scripts: Read.",
+      "Missing EDGE_EVER_BUILDS_API_TOKEN. It must be a User API Token with Workers Builds Configuration: Edit and Workers Scripts: Read.",
     );
   }
 
@@ -207,16 +263,10 @@ const setup = async () => {
     throw new Error(`Worker ${workerName} was not found. Complete the first bun run deploy before enabling Workers Builds.`);
   }
 
-  const requestedBuildToken = value("EDGE_EVER_BUILDS_BUILD_TOKEN_UUID");
   const buildTokens = await request("GET", `/accounts/${accountId}/builds/tokens`);
-  const buildToken = requestedBuildToken
-    ? buildTokens?.find((token) => token.build_token_uuid === requestedBuildToken)
-    : buildTokens?.length === 1 ? buildTokens[0] : undefined;
-  if (!buildToken?.build_token_uuid) {
-    throw new Error(
-      "No unambiguous Workers Builds build token was found. In Cloudflare Dashboard open this Worker -> Settings -> Builds -> API token, create/select a token with D1 edit permission, then set EDGE_EVER_BUILDS_BUILD_TOKEN_UUID and rerun.",
-    );
-  }
+  const triggers = await request("GET", `/accounts/${accountId}/builds/workers/${worker.tag}/triggers`);
+  const existing = triggers?.find((trigger) => trigger.branch_includes?.includes("main"));
+  const buildToken = await selectBuildToken(buildTokens, existing);
 
   const connection = await request("PUT", `/accounts/${accountId}/builds/repos/connections`, {
     provider_type: "github",
@@ -228,8 +278,6 @@ const setup = async () => {
   const repoConnectionUuid = connection?.repo_connection_uuid;
   if (!repoConnectionUuid) throw new Error("Cloudflare did not return repo_connection_uuid.");
 
-  const triggers = await request("GET", `/accounts/${accountId}/builds/workers/${worker.tag}/triggers`);
-  const existing = triggers?.find((trigger) => trigger.branch_includes?.includes("main"));
   const payload = triggerPayload(worker.tag, repoConnectionUuid, buildToken.build_token_uuid);
   const trigger = existing
     ? await request("PATCH", `/accounts/${accountId}/builds/triggers/${existing.trigger_uuid}`, payload)

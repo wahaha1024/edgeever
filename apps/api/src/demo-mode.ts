@@ -2,6 +2,12 @@ type PasswordHasher = (password: string) => Promise<string>;
 
 export const isDemoModeEnabled = (value: string | undefined) => value?.trim().toLowerCase() === "true";
 
+export const shouldUpsertDemoSeedRecord = (
+  existingIds: ReadonlySet<string>,
+  id: string,
+  overwriteExisting: boolean,
+) => overwriteExisting || !existingIds.has(id);
+
 export const resolveDemoPasswordHash = async (
   configuredPassword: string | undefined,
   configuredPasswordHash: string | undefined,

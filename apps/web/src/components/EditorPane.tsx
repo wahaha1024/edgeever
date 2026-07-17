@@ -535,7 +535,7 @@ const MobileNativeEditorPane = ({
 
   const persistDraft = useCallback(() => {
     const currentMemo = memoRef.current;
-    if (!currentMemo || currentMemo.isDeleted) {
+    if (!currentMemo || currentMemo.isDeleted || editingMemoIdRef.current !== currentMemo.id) {
       return;
     }
 
@@ -567,7 +567,14 @@ const MobileNativeEditorPane = ({
     const snapshot = currentSnapshot();
 
     const editSession = editSessionRef.current;
-    if (!currentMemo || currentMemo.isDeleted || !snapshot || savingRef.current || !editSession) {
+    if (
+      !currentMemo ||
+      currentMemo.isDeleted ||
+      editingMemoIdRef.current !== currentMemo.id ||
+      !snapshot ||
+      savingRef.current ||
+      !editSession
+    ) {
       return false;
     }
 
@@ -650,7 +657,7 @@ const MobileNativeEditorPane = ({
 
   const markDirty = useCallback(() => {
     const currentMemo = memoRef.current;
-    if (hydratingRef.current || currentMemo?.isDeleted) {
+    if (hydratingRef.current || currentMemo?.isDeleted || !currentMemo || editingMemoIdRef.current !== currentMemo.id) {
       return;
     }
 
@@ -1547,7 +1554,12 @@ const RichEditorPane = ({
       const currentMemo = memoRef.current;
       const currentEditor = editorRef.current;
 
-      if (!currentMemo || currentMemo.isDeleted || (!useMobilePlainTextEditor && !isEditorReady(currentEditor))) {
+      if (
+        !currentMemo ||
+        currentMemo.isDeleted ||
+        hydratedMemoIdRef.current !== currentMemo.id ||
+        (!useMobilePlainTextEditor && !isEditorReady(currentEditor))
+      ) {
         return;
       }
 

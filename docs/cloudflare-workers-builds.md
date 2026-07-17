@@ -1,112 +1,46 @@
 # Cloudflare Workers Builds
 
-EdgeEver uses Cloudflare Workers Builds for routine deployments. Connect each EdgeEver Worker to the `main` branch of its repository once; every later push, including a GitHub **Sync fork**, then builds, migrates, and deploys that instance automatically.
+Cloudflare Workers Builds deploys EdgeEver whenever `main` changes, including after GitHub **Sync fork**. Use local `bun run deploy` only for the first installation or emergency recovery.
 
-The same deployment commands are used for the official instances and every fork. Local `bun run deploy` remains the first-installation and emergency-recovery path.
+## Setup
 
-## Connect an Instance
-
-First create the instance resources and perform its first deployment as described in the [manual deployment guide](manual-deploy.md). Then use the setup command:
+Complete the [first deployment](manual-deploy.md), then run:
 
 ```sh
 bun run deploy:builds:setup
 ```
 
-It reads the fork's `origin` remote plus `.env.local`, then idempotently creates or updates the repository connection, production trigger, build commands, build cache, watch paths, and Build Variables/Secrets. On its first successful run it also starts a build of `main`, verifying the complete automated path. Rerun it whenever an instance setting changes; later runs update configuration without starting another build.
+The command reads the repository remote and `.env.local`, configures the build, and starts one verification build on first setup. It is safe to rerun after instance settings change.
 
-### One-time Cloudflare authorization
+Only complete the following steps when the command asks for them.
 
-Cloudflare requires two account-level authorizations that cannot be safely automated by a repository script:
+### GitHub authorization
 
-1. Install and authorize the **Cloudflare Workers & Pages** GitHub App for the fork. An Agent can open the Cloudflare dashboard and complete this browser consent; a user only needs to approve the GitHub authorization.
-2. Ensure the Worker has a Workers Builds **build token** with permission to deploy Workers and apply D1 migrations. If the setup command reports that it cannot choose a token, open **Worker** -> **Settings** -> **Builds** -> **API token**, create/select the token, then set its UUID as `EDGE_EVER_BUILDS_BUILD_TOKEN_UUID` in `.env.local` and rerun the command.
+Approve installation of the **Cloudflare Workers & Pages** GitHub App for the fork. This is the app's name; an EdgeEver instance does not require a Pages project. The command handles the repository connection after authorization.
 
-The setup API call requires a **User API Token**, not an **Account API Token**. Workers Builds Configuration API accepts user-scoped tokens only. Create it at [Cloudflare API Tokens](https://dash.cloudflare.com/profile/api-tokens) under **My Profile** -> **API Tokens** (not **Manage Account** -> **Account API Tokens**). Do not use a prebuilt template, including `Edit Cloudflare Workers`: none includes Workers Builds Configuration.
+### Configuration API token
+
+If `EDGE_EVER_BUILDS_API_TOKEN` is missing, create a custom **User API Token** at [My Profile -> API Tokens](https://dash.cloudflare.com/profile/api-tokens) with:
+
+- **Account** -> **Workers Builds Configuration** -> **Edit**
+- **Account** -> **Workers Scripts** -> **Read**
+
+Do not use an Account API Token or a prebuilt template. Limit the token to the relevant account, then save the value shown by Cloudflare once in `.env.local`:
+
+```text
+EDGE_EVER_BUILDS_API_TOKEN=<token>
+```
+
+Never commit or share this token.
 
 ![Redacted Cloudflare User API Token permissions](assets/cloudflare-workers-builds-user-token.svg)
 
-1. Select **Create Token**, scroll to the bottom, and select **Create Custom Token**.
-2. Name it, for example `edgeever automated deployment`.
-3. Add **Account** -> **Workers Builds Configuration** -> **Edit**, then select **Add more**.
-4. Add **Account** -> **Workers Scripts** -> **Read**.
-5. Under **Account Resources**, leave **Include / All accounts** or restrict it to the account for this instance; set a suitable expiry.
-6. Select **Continue to summary** and verify that the summary contains exactly `Workers Builds Configuration: Edit, Workers Scripts: Read`, then select **Create Token**.
-7. Cloudflare shows the token value once. Save it locally as `EDGE_EVER_BUILDS_API_TOKEN=<token>` in `.env.local`; never commit, screenshot, or share it.
+### Deployment API token
 
-This token is used only by `bun run deploy:builds:setup` and is never uploaded to the Worker or Cloudflare Builds. You may instead reuse `CLOUDFLARE_API_TOKEN` only if it is a User API Token with the same permissions.
+If the command reports that no deployment API token is available, open **Worker** -> **Settings** -> **Builds** -> **API token** and create or select one that can deploy the Worker and update D1 and R2, then rerun the command. When several are available, select one by name in the terminal.
 
-## Monorepo Build Isolation
+## Updates and Troubleshooting
 
-The Worker trigger already ignores changes limited to `apps/site/*`, `apps/mobile/*`, `apps/extension/*`, `docs/*`, README files, and `.github/*`. Thus a website-only change does not deploy the EdgeEver Worker.
+After setup, push to `main` or use GitHub **Sync fork**. Cloudflare installs dependencies, checks and builds the app, applies new D1 migrations, and deploys the Worker. No GitHub Actions secrets or local redeployment are required.
 
-For a Git-integrated Cloudflare Pages project, set `EDGE_EVER_PAGES_PROJECT_NAME` and rerun `bun run deploy:builds:setup`. The command configures Pages Build watch paths to `apps/site/*`, `bun.lock`, and `package.json`, so product-only changes do not rebuild the website. This optional step requires the User API Token to additionally have **Account** -> **Cloudflare Pages** -> **Edit**. Without automation, set the same paths in **Pages project** -> **Settings** -> **Build** -> **Build watch paths**.
-
-Cloudflare cannot set Build watch paths on a **Direct Upload** Pages project. In that case, keep the filter in the deploy workflow instead. This repository's `.github/workflows/deploy-site.yml` already runs only for website/docs/shared-build-input changes, so application-only changes do not deploy the official site.
-
-### Manual fallback
-
-If the command cannot be used, configure the Worker in the Cloudflare dashboard:
-
-1. Go to **Workers & Pages** and open the EdgeEver Worker.
-2. Open **Settings** -> **Builds** -> **Connect**.
-3. Authorize GitHub, select the instance repository, and choose the `main` production branch.
-4. Configure the following commands:
-
-   ```text
-   Build command: bun install --frozen-lockfile && bun run build:cloudflare
-   Deploy command: bun run deploy:cloudflare-builds
-   ```
-
-5. Add the instance values from `.env.local` under **Settings** -> **Builds** -> **Build variables and secrets**. Store `EDGE_EVER_AUTH_PASSWORD` as a Build Secret. Existing installations may keep using `EDGE_EVER_AUTH_PASSWORD_HASH` as a Build Secret.
-
-The Worker selected in the dashboard must be the one named by `EDGE_EVER_WORKER_NAME`. The deployment command creates a temporary Wrangler configuration from these variables, so do not commit a D1 ID, R2 bucket name, route, password, or password hash.
-
-## Required Build Variables
-
-Copy the applicable `EDGE_EVER_*` values from the initial deployment's `.env.local` file:
-
-```text
-EDGE_EVER_WORKER_NAME
-EDGE_EVER_WORKERS_DEV
-EDGE_EVER_D1_DATABASE_NAME
-EDGE_EVER_D1_DATABASE_ID
-EDGE_EVER_R2_BUCKET_NAME
-EDGE_EVER_R2_PREVIEW_BUCKET_NAME
-EDGE_EVER_AUTH_USERNAME
-EDGE_EVER_AUTH_PASSWORD               # Build Secret
-EDGE_EVER_SESSION_TTL_DAYS
-EDGE_EVER_DEMO_MODE                   # optional
-EDGE_EVER_DEMO_RESET_CRON             # optional
-EDGE_EVER_CUSTOM_DOMAIN               # optional
-EDGE_EVER_ROUTE_PATTERN               # optional
-```
-
-Existing installations that already use `EDGE_EVER_AUTH_PASSWORD_HASH` may keep it instead of `EDGE_EVER_AUTH_PASSWORD`. If both are present, the hash takes precedence for backward compatibility.
-
-For a multi-instance configuration, set `EDGE_EVER_INSTANCE` and the matching scoped variables such as `EDGE_EVER_PROD_D1_DATABASE_ID` instead. The same resolution rules apply in local deployment and Workers Builds.
-
-Workers Builds needs an API token that can deploy Workers, update R2 bindings, and apply D1 migrations. If the automatically created Builds token does not have D1 edit permission, select or create a token with that permission before enabling automated deployments.
-
-## What Runs on Every Push
-
-```text
-bun install --frozen-lockfile
--> bun run typecheck
--> bun run build
--> bun run db:migrate:remote
--> wrangler deploy
-```
-
-`wrangler d1 migrations apply` records completed SQL migrations in D1. Thus, every instance receives only newly added migration files before the matching Worker version is published.
-
-## Updating a Fork
-
-1. On GitHub, use **Sync fork** to merge upstream changes into the fork's `main` branch.
-2. Cloudflare Workers Builds detects the push and runs the sequence above.
-3. Inspect the build log in the Worker **Deployments** tab if the build fails.
-
-No GitHub Actions secrets or local redeployment are needed after the initial Workers Builds connection.
-
-## Limits
-
-On the Workers Free plan, Workers Builds includes 3,000 build minutes per month and permits one concurrent build per account. See [Cloudflare Workers Builds limits and pricing](https://developers.cloudflare.com/workers/ci-cd/builds/limits-and-pricing/) for current limits.
+If a build fails, inspect its log in the Worker **Deployments** tab. Rerun `bun run deploy:builds:setup` when instance settings change.
